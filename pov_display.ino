@@ -426,6 +426,8 @@ void startTimer(int frequencyHz) {
 }
 
 
+
+
 int temp_offset[HEIGHT];
 
 void TC3_Handler() {
