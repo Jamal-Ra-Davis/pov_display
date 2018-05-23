@@ -25,6 +25,8 @@
 volatile uint8_t buf_idx = 0;
 volatile int buf_offset[HEIGHT] = {20, 30, 40, 50, 0, 10};
 
+doubleBuffer frame_buffer;
+
 unsigned long long timer;
 bool flag = false;
 int hall;
@@ -122,16 +124,19 @@ void setColor(int length, int width, int height, byte red, byte green, byte blue
   fbuf[length][width][height][BLUE] = blue;
 }
 
+long timer_0, timer_delta;
 void setup() {
   pinMode(6, INPUT);
   hall = digitalRead(6);
-  
-  //attachInterrupt(6, hallTrigger, FALLING);
+  timer_0 = millis();
+  timer_delta = 0;
+  attachInterrupt(6, hallTrigger, FALLING);
 
 
   
 
-  clearBuf();
+  //clearBuf();
+  frame_buffer.clear();
 
   for (int j=0; j<WIDTH; j++)
   {
@@ -148,6 +153,7 @@ void setup() {
       fbuf[LENGTH-1][j][k][RED] = 255;
     }
   }
+  
   writeString("HELLO", 15, 2, 255, 64, 128);
   mySPI.begin();
 
@@ -162,14 +168,36 @@ void setup() {
 
 
 
-  clearBuf();
+  frame_buffer.forceSingleBuffer();
+  for (int c=0; c<3; c++)
+  {
+    frame_buffer.clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      for (int j=0; j<WIDTH; j++)
+      {
+        for (int k=0; k<HEIGHT; k++)
+        {
+          frame_buffer.setColorChannel(i, j, k, c, 255); 
+        }
+      }
+      frame_buffer.update();
+      delay(20);  
+    }
+  }
+  frame_buffer.reset();
+
+  //clearBuf();
+  frame_buffer.clear();
+
   
-  int h = 0;
+  //int h = 0;
   for (int i=0; i<LENGTH; i++)
   {
     for (int j = 0; j<WIDTH; j++)
     {
-      fbuf[i][j][i%HEIGHT][BLUE] = 255;
+      //fbuf[i][j][i%HEIGHT][BLUE] = 255;
+      frame_buffer.setColorChannel(i, j, i%HEIGHT, BLUE, 255);
     }
     continue;
     
@@ -190,6 +218,7 @@ void setup() {
       fbuf[0][i][j][RED] = 255;
     
   }
+  frame_buffer.update();
   delay(5000);
 }
 
@@ -199,13 +228,233 @@ void setup() {
 
 
 
+int lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
+int lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
 
 
+int N_CYCLE = 60;
+int num_cnt = 0;
+char cnt_str[10];
 
+
+void randColor(int *r, int *g, int *b)
+{
+  int sel = rand() % 6;
+    int r_, g_, b_;
+    switch (sel)
+    {
+      case 0:
+        r_ = 255;
+        b_ = 0;
+        g_ = rand() % 256;
+        break;
+      case 1:
+        r_ = 255;
+        b_ = rand() % 256;
+        g_ = 0;
+        break;
+      case 2:
+        r_ = 0;
+        b_ = 255;
+        g_ = rand() % 256;
+        break;
+      case 3:
+        r_ = rand() % 256;
+        b_ = 255;
+        g_ = 0;
+        break;
+      case 4:
+        r_ = 0;
+        b_ = rand() % 256;
+        g_ = 255;
+        break;
+      case 5:
+        r_ = rand() % 256;
+        b_ = 0;
+        g_ = 255;
+        break;
+    }
+    *r = r_;
+    *g = g_;
+    *b = b_;
+}
 
 
 void loop() 
 {
+  frame_buffer.reset();
+   char *text[4] = {"HACK A DAY",
+                   "HI NOLAN",
+                   "MAKERFAIRE 2018",
+                   "DONT LET YOUR DREAMS BE DREAMS"};
+  int text_sel = rand() % 4;
+  int height = rand()%HEIGHT;
+  int text_len = strlen(text[text_sel]);
+  uint8_t r = 0;
+  uint8_t g = rand() % 128 + 128;
+  uint8_t b = 255;
+  for (int i=LENGTH + 5; i>(-2*text_len - 5); i--)
+  {
+    frame_buffer.clear();
+    writeString(text[text_sel], i, height, r, g, b, &frame_buffer);
+    frame_buffer.update();
+    delay(40);
+  }
+
+
+
+  /*
+    sprintf(cnt_str, "%d", timer_delta);
+    frame_buffer.clear();
+    writeString(cnt_str, 20, 5, 180, 60, 255, &frame_buffer);
+    frame_buffer.update();
+    
+    //num_cnt++;
+    //if (num_cnt > 150)
+    //  num_cnt = 0;
+    //delay(200);
+    return;
+    */
+    
+    int sel = rand() % 6;
+    int r_, g_, b_;
+    switch (sel)
+    {
+      case 0:
+        r_ = 255;
+        b_ = 0;
+        g_ = rand() % 256;
+        break;
+      case 1:
+        r_ = 255;
+        b_ = rand() % 256;
+        g_ = 0;
+        break;
+      case 2:
+        r_ = 0;
+        b_ = 255;
+        g_ = rand() % 256;
+        break;
+      case 3:
+        r_ = rand() % 256;
+        b_ = 255;
+        g_ = 0;
+        break;
+      case 4:
+        r_ = 0;
+        b_ = rand() % 256;
+        g_ = 255;
+        break;
+      case 5:
+        r_ = rand() % 256;
+        b_ = 0;
+        g_ = 255;
+        break;
+    }
+
+    frame_buffer.reset();
+    for (int cycles=0; cycles<N_CYCLE; cycles++)
+    {
+    frame_buffer.clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      //int idx = (i+cycles)% (LENGTH-10);
+      //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
+
+      
+      
+      int W_0 = lookup[(i+cycles)%10];
+      int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
+      int W_2 = lookup[(i+cycles+6)%10];
+      //if (W_ < WIDTH && W_ >= 0)
+
+      frame_buffer.setColorChannel(i, W_0, 0, RED, 255);
+      frame_buffer.setColorChannel(i, W_1, 2, GREEN, 255);
+      //frame_buffer.setColorChannel(i, W_2, 5, BLUE, 255);
+
+      frame_buffer.setColors(i, W_2, 5, r_, g_, b_);
+      
+      //fbuf[i][W_0][0][RED] = 255; 
+      //fbuf[i][W_1][2][GREEN] = 255;
+      //fbuf[i][W_2][5][BLUE] = 255;
+    }
+    frame_buffer.update();
+    delay(50);
+    }
+
+
+    frame_buffer.forceSingleBuffer();
+    for (int cycles=0; cycles<N_CYCLE; cycles++)
+    {
+    frame_buffer.clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      //int idx = (i+cycles)% (LENGTH-10);
+      //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
+
+      
+      
+      int W_0 = lookup[(i+cycles)%10];
+      int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
+      int W_2 = lookup[(i+cycles+6)%10];
+      //if (W_ < WIDTH && W_ >= 0)
+
+      frame_buffer.setColorChannel(i, W_0, 0, RED, 255);
+      frame_buffer.setColorChannel(i, W_1, 2, GREEN, 255);
+      //frame_buffer.setColorChannel(i, W_2, 5, BLUE, 255);
+
+      frame_buffer.setColors(i, W_2, 5, r_, g_, b_);
+      
+      //fbuf[i][W_0][0][RED] = 255; 
+      //fbuf[i][W_1][2][GREEN] = 255;
+      //fbuf[i][W_2][5][BLUE] = 255;
+    }
+    frame_buffer.update();
+    delay(50);
+    }
+
+
+   // return;
+
+    
+  
+
+    frame_buffer.clear();
+
+  
+/*
+  for (int i=0; i<LENGTH; i++)
+  {
+    for (int j = 0; j<WIDTH; j++)
+    {
+      //fbuf[i][j][i%HEIGHT][BLUE] = 255;
+      frame_buffer.setColorChannel(i, j, i%HEIGHT, GREEN, 255);
+    }
+    continue;
+    
+    int j = i % 2*WIDTH - 2;
+    if (j < WIDTH)
+    {
+      fbuf[i][j][0][BLUE] = 255;
+    }
+    else
+    {
+      j = 2*WIDTH - 2 - j;
+      fbuf[i][j][0][BLUE] = 255;
+    }
+  }
+  for (int i=0; i<WIDTH; i++)
+  {
+    for (int j=0; j<HEIGHT; j++)
+      fbuf[0][i][j][RED] = 255;
+    
+  }
+  frame_buffer.update();
+  delay(5000);
+*/
+
+
+
 
   /*
   for (int i=0; i<LENGTH; i++)
@@ -227,11 +476,16 @@ void loop()
   return;
   */
 
-  int lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
-
+  frame_buffer.forceSingleBuffer();
+  int color_r, color_g, color_b;
+  randColor(&color_r, &color_g, &color_b);
+  
+  
   for (int cycles = 0; cycles <400; cycles++)
   {
-    clearBuf();
+    frame_buffer.clear();
+    if (cycles % 10 == 0)
+      randColor(&color_r, &color_g, &color_b);
     for (int i=0; i<LENGTH; i++)
     {
       //int idx = (i+cycles)% (LENGTH-10);
@@ -245,18 +499,32 @@ void loop()
       int W_4 = (lookup2[(i+cycles+12)%10] + cycles + 4) % 8;
       int W_5 = (lookup2[(i+cycles+15)%10] + cycles + 5) % 8;
       //if (W_ < WIDTH && W_ >= 0)
-      setColor(i, W_0, 0, 10, 200, 200 + (rand() % 55));
-      setColor(i, W_1, 1, 10, 200, 200 + (rand() % 55));
-      setColor(i, W_2, 2, 10, 200, 200 + (rand() % 55));
-      setColor(i, W_3, 3, 10, 200, 200 + (rand() % 55));
-      setColor(i, W_4, 4, 10, 200, 200 + (rand() % 55));
-      setColor(i, W_5, 5, 10, 200, 200 + (rand() % 55));
+
+      
+
+      frame_buffer.setColors(i, W_0, 0, color_r, color_g, color_b);
+      frame_buffer.setColors(i, W_1, 1, color_r, color_g, color_b);
+      frame_buffer.setColors(i, W_2, 2, color_r, color_g, color_b);
+      frame_buffer.setColors(i, W_3, 3, color_r, color_g, color_b);
+      frame_buffer.setColors(i, W_4, 4, color_r, color_g, color_b);
+      frame_buffer.setColors(i, W_5, 5, color_r, color_g, color_b);
+
+      /*
+      frame_buffer.setColors(i, W_0, 0, 10, 200, 200 + (rand() % 29));
+      frame_buffer.setColors(i, W_1, 1, 10, 200, 200 + (rand() % 55));
+      frame_buffer.setColors(i, W_2, 2, 10, 200, 200 + (rand() % 55));
+      frame_buffer.setColors(i, W_3, 3, 10, 200, 200 + (rand() % 55));
+      frame_buffer.setColors(i, W_4, 4, 10, 200, 200 + (rand() % 55));
+      frame_buffer.setColors(i, W_5, 5, 10, 200, 200 + (rand() % 55));
+      */
     }
+    frame_buffer.update();
     delay(50);
   }
   
 
-  clearBuf();
+  frame_buffer.clear();
+  frame_buffer.update();
   delay(500);
   for (int k=0; k<HEIGHT; k++)
   {
@@ -264,11 +532,44 @@ void loop()
     {
       for (int i=LENGTH-1; i>=0; i--)
       {
-        for (int c=0; c<3; c++)
+        int sel = rand() % 6;
+        int r_, g_, b_;
+        switch (sel)
         {
-          fbuf[i][j][k][c] = rand()%256;
-        } 
+          case 0:
+            r_ = 255;
+            b_ = 0;
+            g_ = rand() % 256;
+            break;
+          case 1:
+            r_ = 255;
+            b_ = rand() % 256;
+            g_ = 0;
+            break;
+          case 2:
+            r_ = 0;
+            b_ = 255;
+            g_ = rand() % 256;
+            break;
+          case 3:
+            r_ = rand() % 256;
+            b_ = 255;
+            g_ = 0;
+            break;
+          case 4:
+            r_ = 0;
+            b_ = rand() % 256;
+            g_ = 255;
+            break;
+          case 5:
+            r_ = rand() % 256;
+            b_ = 0;
+            g_ = 255;
+            break;
+        }
 
+        frame_buffer.setColors(i, j, k, r_, g_, b_);
+        frame_buffer.update();
         delayMicroseconds(50);
       }
     }
@@ -280,11 +581,9 @@ void loop()
   //for (int i=0; i<
 
 
-  int lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
-
   for (int cycles = 0; cycles <400; cycles++)
   {
-    clearBuf();
+    frame_buffer.clear();
     for (int i=0; i<LENGTH; i++)
     {
       //int idx = (i+cycles)% (LENGTH-10);
@@ -296,17 +595,17 @@ void loop()
       int W_1 = lookup[(i+400-cycles)%10]; 
       int W_2 = lookup[(i+cycles+6)%10];
       //if (W_ < WIDTH && W_ >= 0)
-      fbuf[i][W_0][0][RED] = 255; 
-      fbuf[i][W_1][2][GREEN] = 255;
-      fbuf[i][W_2][5][BLUE] = 255;
+
+      frame_buffer.setColorChannel(i, W_0, 0, RED, 255);
+      frame_buffer.setColorChannel(i, W_0, 2, GREEN, 255);
+      frame_buffer.setColorChannel(i, W_0, 5, BLUE, 255);
+      //fbuf[i][W_0][0][RED] = 255; 
+      //fbuf[i][W_1][2][GREEN] = 255;
+      //fbuf[i][W_2][5][BLUE] = 255;
     }
+    frame_buffer.update();
     delay(50);
   }
-
-
-
-
-
   return;
 
   
@@ -341,6 +640,8 @@ void loop()
   delay(1000);
   return;
 
+
+/*
   
   //resolveChar(CHAR_BUF[0]);
   char *text[4] = {"HELLO LAURYN  HOW ARE YOU",
@@ -359,7 +660,9 @@ void loop()
     writeString(text[text_sel], i, height, r, g, b);
     delay(100);
   }
-  
+
+
+  */
   //if (attach && (millis() - timer > 3))
   //{
   //  attachInterrupt(10, hallTrigger, FALLING);
@@ -449,6 +752,8 @@ void TC3_Handler() {
       return;
   
 
+  frameBuffer* read_buffer = frame_buffer.getReadBuffer();
+
    for (int k=0; k<HEIGHT; k++)
    {
     temp_offset[k] = (buf_idx + buf_offset[k]) % LENGTH;
@@ -468,9 +773,14 @@ void TC3_Handler() {
       for (int j=0; j<WIDTH; j++)
       {
         mySPI.transfer(0xFF);
+        /*
         mySPI.transfer(fbuf[temp_offset[k]][j][k][BLUE]);
         mySPI.transfer(fbuf[temp_offset[k]][j][k][GREEN]);
         mySPI.transfer(fbuf[temp_offset[k]][j][k][RED]);
+        */
+        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][BLUE]);
+        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][GREEN]);
+        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][RED]);
       }
     }
 
@@ -500,6 +810,11 @@ void TC3_Handler() {
 
 void hallTrigger()
 {
+  long timer_temp = millis();
+  timer_delta = timer_temp - timer_0;
+  timer_0 = timer_temp;
+  return;
+  
   buf_idx = 0;
   
   return;
