@@ -1,6 +1,5 @@
 #include <SPI.h>
 #include "wiring_private.h" // pinPeripheral() function
-
 #include "FrameBuffer.h"
 #include "Text.h"
 
