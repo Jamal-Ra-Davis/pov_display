@@ -2,6 +2,7 @@
 #include "wiring_private.h" // pinPeripheral() function
 #include "FrameBuffer.h"
 #include "Text.h"
+#include "test_animations.h"
 
 #define NUMPIXELS 24 // Number of LEDs in strip
 //#define BLUE 2
@@ -279,6 +280,13 @@ void randColor(int *r, int *g, int *b)
 }
 
 
+
+
+/*********************************************************************/
+/*                                                                   */
+/*                       LOOP STARTS HERE                            */
+/*                                                                   */
+/*********************************************************************/
 void loop() 
 {
   frame_buffer.reset();
@@ -354,31 +362,31 @@ void loop()
     frame_buffer.reset();
     for (int cycles=0; cycles<N_CYCLE; cycles++)
     {
-    frame_buffer.clear();
-    for (int i=0; i<LENGTH; i++)
-    {
-      //int idx = (i+cycles)% (LENGTH-10);
-      //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
-
-      
-      
-      int W_0 = lookup[(i+cycles)%10];
-      int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
-      int W_2 = lookup[(i+cycles+6)%10];
-      //if (W_ < WIDTH && W_ >= 0)
-
-      frame_buffer.setColorChannel(i, W_0, 0, RED, 255);
-      frame_buffer.setColorChannel(i, W_1, 2, GREEN, 255);
-      //frame_buffer.setColorChannel(i, W_2, 5, BLUE, 255);
-
-      frame_buffer.setColors(i, W_2, 5, r_, g_, b_);
-      
-      //fbuf[i][W_0][0][RED] = 255; 
-      //fbuf[i][W_1][2][GREEN] = 255;
-      //fbuf[i][W_2][5][BLUE] = 255;
-    }
-    frame_buffer.update();
-    delay(50);
+      frame_buffer.clear();
+      for (int i=0; i<LENGTH; i++)
+      {
+        //int idx = (i+cycles)% (LENGTH-10);
+        //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
+  
+        
+        
+        int W_0 = lookup[(i+cycles)%10];
+        int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
+        int W_2 = lookup[(i+cycles+6)%10];
+        //if (W_ < WIDTH && W_ >= 0)
+  
+        frame_buffer.setColorChannel(i, W_0, 0, RED, 255);
+        frame_buffer.setColorChannel(i, W_1, 2, GREEN, 255);
+        //frame_buffer.setColorChannel(i, W_2, 5, BLUE, 255);
+  
+        frame_buffer.setColors(i, W_2, 5, r_, g_, b_);
+        
+        //fbuf[i][W_0][0][RED] = 255; 
+        //fbuf[i][W_1][2][GREEN] = 255;
+        //fbuf[i][W_2][5][BLUE] = 255;
+      }
+      frame_buffer.update();
+      delay(50);
     }
 
 
@@ -639,47 +647,6 @@ void loop()
   delay(1000);
   return;
 
-
-/*
-  
-  //resolveChar(CHAR_BUF[0]);
-  char *text[4] = {"HELLO LAURYN  HOW ARE YOU",
-                   "HI NOLAN",
-                   "I SURE HOPE THIS ACTUALLY WORKS",
-                   "DONT LET YOUR DREAMS BE DREAMS"};
-  int text_sel = rand() % 4;
-  int height = rand()%HEIGHT;
-  int text_len = strlen(text[text_sel]);
-  uint8_t r = 0;
-  uint8_t g = rand() % 128 + 128;
-  uint8_t b = 255;
-  for (int i=LENGTH + 5; i>(-2*text_len - 5); i--)
-  {
-    clearBuf();
-    writeString(text[text_sel], i, height, r, g, b);
-    delay(100);
-  }
-
-
-  */
-  //if (attach && (millis() - timer > 3))
-  //{
-  //  attachInterrupt(10, hallTrigger, FALLING);
-  //}
-
-  /*
-  clearBuf();
-  for (int i=0; i<LENGTH; i++)
-  {
-    for (int j=0; j<WIDTH; j++)
-    {
-      fbuf[i][j][0][RED] = 255;
-      fbuf[i][j][1][GREEN] = 255;
-      fbuf[i][j][2][BLUE] = 255;
-    }
-  }
-  delay(500);
-  */
 }
 
 void setTimerFrequency(int frequencyHz) {

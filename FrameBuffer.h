@@ -76,6 +76,8 @@ class doubleBuffer
     void update();
     frameBuffer* getWriteBuffer() {return write_buffer;}
     frameBuffer* getReadBuffer() {return read_buffer;}
+
+    static void randColor(int *r, int *g, int *b);
     
 };
 
@@ -126,6 +128,48 @@ void doubleBuffer::update()
   frameBuffer *temp = read_buffer;
   read_buffer = write_buffer;
   write_buffer = temp;
+}
+
+void doubleBuffer::randColor(int *r, int *g, int *b)
+{
+  int sel = rand() % 6;
+  int r_, g_, b_;
+  switch (sel)
+  {
+    case 0:
+      r_ = 255;
+      b_ = 0;
+      g_ = rand() % 256;
+      break;
+    case 1:
+      r_ = 255;
+      b_ = rand() % 256;
+      g_ = 0;
+      break;
+    case 2:
+      r_ = 0;
+      b_ = 255;
+      g_ = rand() % 256;
+      break;
+    case 3:
+      r_ = rand() % 256;
+      b_ = 255;
+      g_ = 0;
+      break;
+    case 4:
+      r_ = 0;
+      b_ = rand() % 256;
+      g_ = 255;
+      break;
+    case 5:
+      r_ = rand() % 256;
+      b_ = 0;
+      g_ = 255;
+      break;
+  }
+  *r = r_;
+  *g = g_;
+  *b = b_;
 }
 
 
