@@ -70,6 +70,7 @@ class doubleBuffer
     doubleBuffer();
     void reset();
     void forceSingleBuffer();
+    bool isSingleBuffered() {return read_buffer == write_buffer;}
     void setColorChannel(int l, int w, int h, int c_idx, int c_val);
     void setColors(int l, int w, int h, int rVal, int gVal, int bVal);
     void clear();

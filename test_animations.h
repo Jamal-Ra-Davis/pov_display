@@ -98,7 +98,8 @@ void vortexAnimation(doubleBuffer *frame_buffer)
 {
   int lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
   
-  frame_buffer->forceSingleBuffer();
+  //frame_buffer->forceSingleBuffer();
+  frame_buffer->reset();
   int color_r, color_g, color_b;
   doubleBuffer::randColor(&color_r, &color_g, &color_b);
   
