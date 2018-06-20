@@ -9,10 +9,13 @@
 //#define GREEN 1
 //#define RED 0
 
-#define LED_PIN 13
+#define LED_PIN 9 //13
 
 #define CPU_HZ 48000000
 #define TIMER_PRESCALER_DIV 1024
+
+#define CPU_HZ_SCALE 48ull
+
 
 
 //#define LENGTH 60
@@ -125,36 +128,52 @@ void setColor(int length, int width, int height, byte red, byte green, byte blue
 }
 
 long timer_0, timer_delta;
-void setup() {
+
+
+void hallEffectSetup()
+{
+  //Setup hall effect
+  pinMode(6, INPUT);
+  hall = digitalRead(6); // Don't think is necessary
+  timer_delta = 0;
+  timer_0 = micros();
+  
+  attachInterrupt(6, hallTrigger, FALLING);
+  delay(5);// Allow time for timer delta to setup
+}
+void sercomSetup()
+{
+  //writeString("HELLO", 15, 2, 255, 64, 128);
+  mySPI.begin();
+
+  // Assign pins 11, 12, 13 to SERCOM functionality
+  pinPeripheral(11, PIO_SERCOM);
+  pinPeripheral(12, PIO_SERCOM);
+  pinPeripheral(13, PIO_SERCOM);
+}
+void setup()
+{
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  frame_buffer.reset();
+  sercomSetup();
+  hallEffectSetup();
+}
+
+void setup_() {
   pinMode(6, INPUT);
   hall = digitalRead(6);
-  timer_0 = millis();
   timer_delta = 0;
+  timer_0 = micros();
+  
   attachInterrupt(6, hallTrigger, FALLING);
-
-
+  delay(5); // Allow time for t
   
 
   //clearBuf();
-  frame_buffer.clear();
-
-  for (int j=0; j<WIDTH; j++)
-  {
-    for (int k=0; k<HEIGHT; k++)
-    {
-      fbuf[0][j][k][GREEN] = 255;
-      fbuf[0][j][k][BLUE] = 255;
-    }
-  }
-  for (int j=0; j<WIDTH; j++)
-  {
-    for (int k=0; k<HEIGHT; k++)
-    {
-      fbuf[LENGTH-1][j][k][RED] = 255;
-    }
-  }
+  frame_buffer.reset();
   
-  writeString("HELLO", 15, 2, 255, 64, 128);
+  //writeString("HELLO", 15, 2, 255, 64, 128);
   mySPI.begin();
 
   // Assign pins 11, 12, 13 to SERCOM functionality
@@ -162,7 +181,8 @@ void setup() {
   pinPeripheral(12, PIO_SERCOM);
   pinPeripheral(13, PIO_SERCOM);
   
-  //pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
   timer = micros();
   startTimer(1800);
 
@@ -182,7 +202,7 @@ void setup() {
         }
       }
       frame_buffer.update();
-      delay(20);  
+      delay(7);  
     }
   }
   frame_buffer.reset();
@@ -301,6 +321,31 @@ void loop()
   //delay(200);
   return;
   */
+  frame_buffer.reset();
+  while(1)
+  {
+    int r, g, b;
+    
+    frame_buffer.clear();
+    for (int j=0; j<WIDTH; j++)
+    {
+      doubleBuffer::randColor(&r, &g, &b);
+      for (int k=0; k<HEIGHT; k++)
+      {
+        frame_buffer.setColors(0, j, k, r, g, b);
+        frame_buffer.setColors(15, j, k, r, g, b);
+        frame_buffer.setColors(30, j, k, r, g, b);
+        frame_buffer.setColors(45, j, k, r, g, b);
+      }
+    }
+    frame_buffer.update();
+    delay(1000);  
+  }
+  return;
+  
+  pulseAnimation(&frame_buffer);
+  return;
+
 
   textAnimation(&frame_buffer);
   pinWheelAnimation_0(&frame_buffer);
@@ -317,6 +362,17 @@ void loop()
 
 void setTimerFrequency(int frequencyHz) {
   int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
+  TcCount16* TC = (TcCount16*) TC3;
+  // Make sure the count is in a proportional position to where it was
+  // to prevent any jitter or disconnect when changing the compare value.
+  TC->COUNT.reg = map(TC->COUNT.reg, 0, TC->CC[0].reg, 0, compareValue);
+  TC->CC[0].reg = compareValue;
+  //Serial.println(TC->COUNT.reg);
+  //Serial.println(TC->CC[0].reg);
+  while (TC->STATUS.bit.SYNCBUSY == 1);
+}
+void setTimerPeriod(int period_us) {//period in us
+  int compareValue = ((CPU_HZ_SCALE*period_us) / TIMER_PRESCALER_DIV) - 1;
   TcCount16* TC = (TcCount16*) TC3;
   // Make sure the count is in a proportional position to where it was
   // to prevent any jitter or disconnect when changing the compare value.
@@ -360,6 +416,38 @@ void startTimer(int frequencyHz) {
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 }
 
+void startTimerPeriod(int period_us) {
+  REG_GCLK_CLKCTRL = (uint16_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_TCC2_TC3) ;
+  while ( GCLK->STATUS.bit.SYNCBUSY == 1 ); // wait for sync
+
+  TcCount16* TC = (TcCount16*) TC3;
+
+  TC->CTRLA.reg &= ~TC_CTRLA_ENABLE;
+  while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+  // Use the 16-bit timer
+  TC->CTRLA.reg |= TC_CTRLA_MODE_COUNT16;
+  while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+  // Use match mode so that the timer counter resets when the count matches the compare register
+  TC->CTRLA.reg |= TC_CTRLA_WAVEGEN_MFRQ;
+  while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+  // Set prescaler to 1024
+  TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
+  while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+  setTimerPeriod(period_us);
+
+  // Enable the compare interrupt
+  TC->INTENSET.reg = 0;
+  TC->INTENSET.bit.MC0 = 1;
+
+  NVIC_EnableIRQ(TC3_IRQn);
+
+  TC->CTRLA.reg |= TC_CTRLA_ENABLE;
+  while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+}
 
 
 
@@ -374,22 +462,33 @@ void TC3_Handler() {
     TC->INTFLAG.bit.MC0 = 1;
     // Write callback here!!!
 
+  /*
   uint8_t hall_ = digitalRead(6);
   if(!hall_ && hall)
   {
     buf_idx = 0;
   }
   hall = hall_;
+  */
+  /*
+  if (flag)
+  {
+    buf_idx = 0;
+    flag = false;
+  }
+  */
+  if (digitalRead(6))
+    digitalWrite(LED_PIN, LOW);
   if (buf_idx >= LENGTH)
       return;
   
 
   frameBuffer* read_buffer = frame_buffer.getReadBuffer();
 
-   for (int k=0; k<HEIGHT; k++)
-   {
-    temp_offset[k] = (buf_idx + buf_offset[k]) % LENGTH;
-   }
+   //for (int k=0; k<HEIGHT; k++)
+   //{
+   // temp_offset[k] = (buf_idx + buf_offset[k]) % LENGTH;
+   //}
     
     mySPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
 
@@ -402,17 +501,17 @@ void TC3_Handler() {
 
     for (int k=0; k<HEIGHT; k++)
     {
+      int offset = (buf_idx + buf_offset[k]) % LENGTH;
       for (int j=0; j<WIDTH; j++)
       {
         mySPI.transfer(0xFF);
-        /*
-        mySPI.transfer(fbuf[temp_offset[k]][j][k][BLUE]);
-        mySPI.transfer(fbuf[temp_offset[k]][j][k][GREEN]);
-        mySPI.transfer(fbuf[temp_offset[k]][j][k][RED]);
-        */
-        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][BLUE]);
-        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][GREEN]);
-        mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][RED]);
+        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][BLUE]);
+        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][GREEN]);
+        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][RED]);
+
+        mySPI.transfer(read_buffer->fbuf_[offset][j][k][BLUE]);
+        mySPI.transfer(read_buffer->fbuf_[offset][j][k][GREEN]);
+        mySPI.transfer(read_buffer->fbuf_[offset][j][k][RED]);
       }
     }
 
@@ -442,9 +541,14 @@ void TC3_Handler() {
 
 void hallTrigger()
 {
-  long timer_temp = millis();
+  digitalWrite(LED_PIN, HIGH);
+  long timer_temp = micros();
   timer_delta = timer_temp - timer_0;
+  if (timer_delta < 15000)
+    timer_delta = 15000;
   timer_0 = timer_temp;
+  buf_idx = 0;
+  startTimerPeriod(timer_delta/60);
   return;
   
   buf_idx = 0;

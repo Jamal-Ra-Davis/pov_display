@@ -199,6 +199,74 @@ void pinWheelAnimation_1(doubleBuffer *frame_buffer)
   }
 }
 
+void pulseAnimation(doubleBuffer *frame_buffer)
+{
+  uint8_t pixels[LENGTH][WIDTH];
+  uint8_t pixels_target[LENGTH][WIDTH];
+  frame_buffer->reset();
+  frame_buffer->clear();
+  
+  int r, g, b;
+  doubleBuffer::randColor(&r, &g, &b);
+  for (int i=0; i<LENGTH; i++)
+  {
+    for (int j=0; j<WIDTH; j++)
+    {
+      pixels[i][j] = 0;
+      pixels_target[i][j] = rand()%HEIGHT;
+      frame_buffer->setColors(i, j, 0, r, g, b);
+    }
+  }
+  frame_buffer->update();
+  delay(1000);
+
+  
+  for (int k=0; k<HEIGHT; k++)
+  {
+    frame_buffer->clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      for (int j=0; j<WIDTH; j++)
+      {
+        if (k <= pixels_target[i][j])
+        {
+          frame_buffer->setColors(i, j, k, r, g, b);
+        }
+        else
+        {
+          frame_buffer->setColors(i, j, pixels_target[i][j], r, g, b);
+        }
+      }
+    }
+    frame_buffer->update();
+    delay(35);
+  }
+  delay(965);
+
+  for (int k=HEIGHT-2; k>=1; k--)
+  {
+    frame_buffer->clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      for (int j=0; j<WIDTH; j++)
+      {
+        if (k <= pixels_target[i][j])
+        {
+          frame_buffer->setColors(i, j, k, r, g, b);
+        }
+        else
+        {
+          frame_buffer->setColors(i, j, pixels_target[i][j], r, g, b);
+        }
+      }
+    }
+    frame_buffer->update();
+    delay(35);
+  }
+
+  
+}
+
 
 
 
