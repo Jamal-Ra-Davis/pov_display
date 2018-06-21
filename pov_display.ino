@@ -9,7 +9,7 @@
 //#define GREEN 1
 //#define RED 0
 
-#define LED_PIN 9 //13
+#define LED_PIN 9
 
 #define CPU_HZ 48000000
 #define TIMER_PRESCALER_DIV 1024
@@ -453,6 +453,7 @@ void startTimerPeriod(int period_us) {
 
 int temp_offset[HEIGHT];
 
+frameBuffer* read_buffer;
 void TC3_Handler() {
   //digitalWrite(10, HIGH);
   TcCount16* TC = (TcCount16*) TC3;
@@ -483,7 +484,7 @@ void TC3_Handler() {
       return;
   
 
-  frameBuffer* read_buffer = frame_buffer.getReadBuffer();
+  read_buffer = frame_buffer.getReadBuffer();
 
    //for (int k=0; k<HEIGHT; k++)
    //{
@@ -548,19 +549,8 @@ void hallTrigger()
     timer_delta = 15000;
   timer_0 = timer_temp;
   buf_idx = 0;
-  startTimerPeriod(timer_delta/60);
+  startTimerPeriod(timer_delta/LENGTH);
   return;
-  
-  buf_idx = 0;
-  
-  return;
-  //delay(1);
-  if (millis() - timer < 15)
-    return;
-  //buf_idx = 0;
-  //detachInterrupt(10);
-  flag = true;
-  timer = millis();
 }
 
 
