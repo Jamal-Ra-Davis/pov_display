@@ -7,9 +7,9 @@
 void textAnimation(doubleBuffer *frame_buffer)
 {
   frame_buffer->reset();
-  char *text[4] = {"HACK A DAY",
-                  "HI NOLAN",
-                  "MAKERFAIRE 2018",
+  char *text[4] = {"CMU ECE",
+                  "HELLO WORLD",
+                  "EMBEDDED SYSTEMS ARE FUN",
                   "DONT LET YOUR DREAMS BE DREAMS"};
   int text_sel = rand() % 4;
   int height = rand()%HEIGHT;

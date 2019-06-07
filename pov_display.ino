@@ -10,7 +10,7 @@
 //#define RED 0
 
 #define LED_PIN 9
-
+#define HALL_PIN 6
 #define CPU_HZ 48000000
 #define TIMER_PRESCALER_DIV 1024
 
@@ -158,6 +158,7 @@ void setup()
   frame_buffer.reset();
   sercomSetup();
   hallEffectSetup();
+  startTimer(1800);
 }
 
 void setup_() {
@@ -322,6 +323,7 @@ void loop()
   return;
   */
   frame_buffer.reset();
+  /*
   while(1)
   {
     int r, g, b;
@@ -342,9 +344,9 @@ void loop()
     delay(1000);  
   }
   return;
-  
-  pulseAnimation(&frame_buffer);
-  return;
+  */
+  //pulseAnimation(&frame_buffer);
+  //return;
 
 
   textAnimation(&frame_buffer);
@@ -478,7 +480,7 @@ void TC3_Handler() {
     flag = false;
   }
   */
-  if (digitalRead(6))
+  if (digitalRead(HALL_PIN))
     digitalWrite(LED_PIN, LOW);
   if (buf_idx >= LENGTH)
       return;
@@ -542,14 +544,17 @@ void TC3_Handler() {
 
 void hallTrigger()
 {
+  
   digitalWrite(LED_PIN, HIGH);
+  /*
   long timer_temp = micros();
   timer_delta = timer_temp - timer_0;
   if (timer_delta < 15000)
     timer_delta = 15000;
   timer_0 = timer_temp;
+  */
   buf_idx = 0;
-  startTimerPeriod(timer_delta/LENGTH);
+  //startTimerPeriod(timer_delta/LENGTH);
   return;
 }
 
