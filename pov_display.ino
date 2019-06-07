@@ -484,8 +484,9 @@ void TC3_Handler() {
     digitalWrite(LED_PIN, LOW);
   if (buf_idx >= LENGTH)
       return;
-  
 
+  driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+/*
   read_buffer = frame_buffer.getReadBuffer();
 
    //for (int k=0; k<HEIGHT; k++)
@@ -508,10 +509,6 @@ void TC3_Handler() {
       for (int j=0; j<WIDTH; j++)
       {
         mySPI.transfer(0xFF);
-        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][BLUE]);
-        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][GREEN]);
-        //mySPI.transfer(read_buffer->fbuf_[temp_offset[k]][j][k][RED]);
-
         mySPI.transfer(read_buffer->fbuf_[offset][j][k][BLUE]);
         mySPI.transfer(read_buffer->fbuf_[offset][j][k][GREEN]);
         mySPI.transfer(read_buffer->fbuf_[offset][j][k][RED]);
@@ -526,14 +523,8 @@ void TC3_Handler() {
       mySPI.transfer(0xFF);
 
     mySPI.endTransaction();
+*/
 
-
-//    for (int k=0; k<HEIGHT; k++)
-//    {
-//      buf_offset[k]++;
-//      if (buf_offset[k] >= LENGTH)
-//        buf_offset[k] = 0;
-//    }
     buf_idx++;
     //if (buf_idx >= LENGTH)
     //  buf_idx = 0;

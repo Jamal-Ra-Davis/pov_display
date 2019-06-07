@@ -172,6 +172,39 @@ void doubleBuffer::randColor(int *r, int *g, int *b)
   *g = g_;
   *b = b_;
 }
+void driveLEDS(int buf_idx, int *buf_offset, doubleBuffer* frame_buffer, SPIClass* mySPI)
+{
+  frameBuffer* read_buffer = frame_buffer->getReadBuffer();
+  mySPI->beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
 
+  //Start Frame
+  mySPI->transfer(0x00);
+  mySPI->transfer(0x00);
+  mySPI->transfer(0x00);
+  mySPI->transfer(0x00);
+  mySPI->transfer(0x00);
+
+  for (int k=0; k<HEIGHT; k++)
+  {
+    int offset = (buf_idx + buf_offset[k]) % LENGTH;
+    for (int j=0; j<WIDTH; j++)
+    {
+      mySPI->transfer(0xFF);
+      mySPI->transfer(read_buffer->fbuf_[offset][j][k][BLUE]);
+      mySPI->transfer(read_buffer->fbuf_[offset][j][k][GREEN]);
+      mySPI->transfer(read_buffer->fbuf_[offset][j][k][RED]);
+    }
+  }
+
+  //End Frame
+  mySPI->transfer(0xFF);
+  mySPI->transfer(0xFF);
+  mySPI->transfer(0xFF);
+  mySPI->transfer(0xFF);
+  mySPI->transfer(0xFF);
+
+  mySPI->endTransaction();
+  //buf_idx++;
+}
 
 #endif
