@@ -535,8 +535,18 @@ void TC3_Handler() {
 
 void hallTrigger()
 {
-  
   digitalWrite(LED_PIN, HIGH);
+
+  //Reset timer to zero
+  TcCount16* TC = (TcCount16*) TC3;
+  TC->COUNT.reg = 0;
+  
+  
+  driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+  buf_idx = 1;
+  while (TC->STATUS.bit.SYNCBUSY == 1);
+  return;
+  
   /*
   long timer_temp = micros();
   timer_delta = timer_temp - timer_0;
@@ -544,7 +554,7 @@ void hallTrigger()
     timer_delta = 15000;
   timer_0 = timer_temp;
   */
-  buf_idx = 0;
+  //buf_idx = 0; 
   //startTimerPeriod(timer_delta/LENGTH);
   return;
 }
