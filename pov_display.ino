@@ -457,79 +457,20 @@ int temp_offset[HEIGHT];
 
 frameBuffer* read_buffer;
 void TC3_Handler() {
-  //digitalWrite(10, HIGH);
   TcCount16* TC = (TcCount16*) TC3;
   // If this interrupt is due to the compare register matching the timer count
   // we toggle the LED.
   if (TC->INTFLAG.bit.MC0 == 1) {
     TC->INTFLAG.bit.MC0 = 1;
     // Write callback here!!!
-
-  /*
-  uint8_t hall_ = digitalRead(6);
-  if(!hall_ && hall)
-  {
-    buf_idx = 0;
-  }
-  hall = hall_;
-  */
-  /*
-  if (flag)
-  {
-    buf_idx = 0;
-    flag = false;
-  }
-  */
-  if (digitalRead(HALL_PIN))
-    digitalWrite(LED_PIN, LOW);
-  if (buf_idx >= LENGTH)
-      return;
-
-  driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
-/*
-  read_buffer = frame_buffer.getReadBuffer();
-
-   //for (int k=0; k<HEIGHT; k++)
-   //{
-   // temp_offset[k] = (buf_idx + buf_offset[k]) % LENGTH;
-   //}
-    
-    mySPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
-
-    //Start Frame
-    mySPI.transfer(0x00);
-    mySPI.transfer(0x00);
-    mySPI.transfer(0x00);
-    mySPI.transfer(0x00);
-    mySPI.transfer(0x00);
-
-    for (int k=0; k<HEIGHT; k++)
-    {
-      int offset = (buf_idx + buf_offset[k]) % LENGTH;
-      for (int j=0; j<WIDTH; j++)
-      {
-        mySPI.transfer(0xFF);
-        mySPI.transfer(read_buffer->fbuf_[offset][j][k][BLUE]);
-        mySPI.transfer(read_buffer->fbuf_[offset][j][k][GREEN]);
-        mySPI.transfer(read_buffer->fbuf_[offset][j][k][RED]);
-      }
-    }
-
-    //End Frame
-      mySPI.transfer(0xFF);
-      mySPI.transfer(0xFF);
-      mySPI.transfer(0xFF);
-      mySPI.transfer(0xFF);
-      mySPI.transfer(0xFF);
-
-    mySPI.endTransaction();
-*/
-
+    if (digitalRead(HALL_PIN))
+      digitalWrite(LED_PIN, LOW);
+    if (buf_idx >= LENGTH)
+        return;
+  
+    driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
     buf_idx++;
-    //if (buf_idx >= LENGTH)
-    //  buf_idx = 0;
   }
-  //digitalWrite(10, LOW);
 }
 
 
@@ -556,7 +497,7 @@ void hallTrigger()
   */
   //buf_idx = 0; 
   //startTimerPeriod(timer_delta/LENGTH);
-  return;
+  //return;
 }
 
 
