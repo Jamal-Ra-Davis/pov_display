@@ -159,6 +159,7 @@ void setup()
   sercomSetup();
   hallEffectSetup();
   startTimer(1800);
+  frame_buffer.reset();
 }
 
 void setup_() {
@@ -310,6 +311,71 @@ void randColor(int *r, int *g, int *b)
 /*********************************************************************/
 void loop() 
 {
+  for (int a=1; a<=LENGTH; a++)
+  {
+  frame_buffer.clear();
+  for (int i=0; i<a; i++)
+  {
+    int r, g, b;
+    doubleBuffer::randColor(&r, &g, &b);
+    int i_ = i % 10;
+    int h_idx;
+    if (i_ < 6)
+    {
+      h_idx = i_;
+    }
+    else
+    {
+      h_idx = 10 - i_;
+    }
+    for (int j=0; j<WIDTH; j++)
+    {
+      frame_buffer.setColors(i, j, h_idx, r, g, b);
+    }
+  }
+  frame_buffer.update();
+  delay(200);
+  }
+  delay(10000);
+
+  frame_buffer.clear();
+  frame_buffer.update();
+  delay(500);
+
+  int anm_color[WIDTH][COLORS];
+  for (int j=0; j<WIDTH; j++)
+  {
+    doubleBuffer::randColor(&(anm_color[j][RED]), &(anm_color[j][GREEN]), &(anm_color[j][BLUE]));
+  }
+  for (int N=0; N<1000; N++)
+  {
+  frame_buffer.clear();
+  for (int j=0; j<WIDTH; j++)
+  {
+    //int r, g, b;
+    //doubleBuffer::randColor(&r, &g, &b);
+    int i_ = (j+N) % 10;
+    int h_idx;
+    if (i_ < 6)
+    {
+      h_idx = i_;
+    }
+    else
+    {
+      h_idx = 10 - i_;
+    }
+    for (int i=0; i<LENGTH; i++)
+    {
+      //frame_buffer.setColors(i, j, h_idx, r, g, b);
+      frame_buffer.setColors(i, j, h_idx, anm_color[j][RED], anm_color[j][GREEN], anm_color[j][BLUE]);
+    }
+  }
+  frame_buffer.update();
+  delay(50);
+  }
+  //delay(10000);
+  return;
+  
   /*
   sprintf(cnt_str, "%d", timer_delta);
   frame_buffer.clear();
@@ -359,6 +425,29 @@ void loop()
 
   multicolorFillAnimation(&frame_buffer);
   pinWheelAnimation_1(&frame_buffer);
+
+  frame_buffer.clear();
+  for (int i=0; i<LENGTH; i++)
+  {
+    int r, g, b;
+    doubleBuffer::randColor(&r, &g, &b);
+    int i_ = i % 10;
+    int h_idx;
+    if (i_ < 6)
+    {
+      h_idx = i_;
+    }
+    else
+    {
+      h_idx = 10 - i_;
+    }
+    for (int j=0; j<WIDTH; j++)
+    {
+      frame_buffer.setColors(i, j, h_idx, r, g, b);
+    }
+  }
+  frame_buffer.update();
+  delay(5000);
 }
 
 
