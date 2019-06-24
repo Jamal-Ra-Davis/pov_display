@@ -502,6 +502,7 @@ void startTimer(int frequencyHz) {
   TC->INTENSET.bit.MC0 = 1;
 
   NVIC_EnableIRQ(TC3_IRQn);
+  NVIC_SetPriority(TC3_IRQn, 4); 
 
   TC->CTRLA.reg |= TC_CTRLA_ENABLE;
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
@@ -535,6 +536,7 @@ void startTimerPeriod(int period_us) {
   TC->INTENSET.bit.MC0 = 1;
 
   NVIC_EnableIRQ(TC3_IRQn);
+  NVIC_SetPriority(TC3_IRQn, 4); 
 
   TC->CTRLA.reg |= TC_CTRLA_ENABLE;
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
