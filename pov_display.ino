@@ -153,6 +153,7 @@ void sercomSetup()
 }
 void setup()
 {
+  Serial1.begin(9600);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   frame_buffer.reset();
@@ -309,8 +310,177 @@ void randColor(int *r, int *g, int *b)
 /*                       LOOP STARTS HERE                            */
 /*                                                                   */
 /*********************************************************************/
+int dir = 0;
+int pos_x = 0;
+int pos_y = 4;
+int pos_z = 4;
+
+int button_states[3];
+bool press_state[3] = {false, false, false};
 void loop() 
 {
+  /* 
+  for (int i=0; i<3; i++)
+  {
+    button_states[i] = 0;  
+  }
+  while (Serial1.available())
+  {
+    if (Serial1.available() > 1)
+    {
+      char c0 = Serial1.read();
+      char c1 = Serial1.read();
+      switch (c0)
+      {
+        case '1':
+        {
+          if (c1 == 'p')
+          {
+            button_states[0] = 1;
+            press_state[0] = true;
+          }
+          else if(c1 == 'r')
+          {
+            button_states[0] = 2;
+            press_state[0] = false;
+          }
+          break;
+        }
+        case '2':
+        {
+          if (c1 == 'p')
+          {
+            button_states[1] = 1;
+            press_state[1] = true;
+          }
+          else if(c1 == 'r')
+          {
+            button_states[1] = 2;
+            press_state[1] = false;
+          }
+          break;
+        }
+        case '3':
+        {
+          if (c1 == 'p')
+          {
+            button_states[2] = 1;
+            press_state[2] = true;
+          }
+          else if(c1 == 'r')
+          {
+            button_states[2] = 2;
+            press_state[2] = false;
+          }
+          break;
+        }
+      }
+    }
+    else
+    {
+      Serial1.read();
+    }
+  }
+
+  if (press_state[0])
+  {
+    pos_x++;
+    if (pos_x >= LENGTH)
+      pos_x = 0;
+  }
+  if (press_state[1])
+  {
+    pos_y++;
+    if (pos_y >= WIDTH)
+      pos_y = 0;
+  }
+  if (press_state[2])
+  {
+    pos_z++;
+    if (pos_z >= HEIGHT)
+      pos_z = 0;
+  }
+  frame_buffer.clear();
+  frame_buffer.setColors(pos_x, pos_y, pos_z, 0x00, 0xFF, 0xFF);
+  frame_buffer.update();
+  delay(50);
+  return;
+  
+  
+  while (Serial1.available())
+  {
+    char c = Serial1.read();
+    if (c == 'l')
+      dir = 0;
+    if (c == 'r')
+      dir = 1;
+    if (c == 'b')
+      dir = 2;
+    if (c == 'f')
+      dir = 3;
+    if (c == 'd')
+      dir = 4;
+    if (c == 'u')
+      dir = 5;
+  }
+  switch (dir)
+  {
+    case 0:
+    {
+      pos_x--;
+      if (pos_x < 0)
+        pos_x = LENGTH - 1;
+      break;
+    }
+    case 1:
+    {
+      pos_x++;
+      if (pos_x >= LENGTH)
+        pos_x = 0;
+      break;
+    }
+    case 2:
+    {
+      pos_y--;
+      if (pos_y < 0)
+        pos_y = WIDTH - 1;
+      break;
+    }
+    case 3:
+    {
+      pos_y++;
+      if (pos_y >= WIDTH)
+        pos_y = 0;
+      break;
+    }
+    case 4:
+    {
+      pos_z--;
+      if (pos_z < 0)
+        pos_z = HEIGHT - 1;
+      break;
+    }
+    case 5:
+    {
+      pos_z++;
+      if (pos_z >= HEIGHT)
+        pos_z = 0;
+      break;
+    }
+  }
+  frame_buffer.clear();
+  frame_buffer.setColors(pos_x, pos_y, pos_z, 0x00, 0xFF, 0xFF);
+  for (int i=0; i<WIDTH; i++)
+  {
+    frame_buffer.setColors(20, i, 0, 0xFF, 0x00, 0x00);
+    frame_buffer.setColors(20-1, i, 0, 0x80, 0x00, 0xFF);
+  }
+  frame_buffer.update();
+  delay(100);
+  return;
+
+  
+  
   for (int a=1; a<=LENGTH; a++)
   {
   frame_buffer.clear();
@@ -375,7 +545,7 @@ void loop()
   }
   //delay(10000);
   return;
-  
+  */
   /*
   sprintf(cnt_str, "%d", timer_delta);
   frame_buffer.clear();
