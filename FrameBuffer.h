@@ -1,6 +1,8 @@
 #ifndef FRAME_BUFFER_LIB
 #define FRAME_BUFFER_LIB
 
+#include "Vector3d.h"
+
 #define BLUE 2
 #define GREEN 1
 #define RED 0
@@ -11,6 +13,7 @@
 #define COLORS 3
 
 volatile static uint8_t fbuf[LENGTH][WIDTH][HEIGHT][COLORS];
+
 
 
 void clearBuf()
@@ -79,7 +82,10 @@ class doubleBuffer
     frameBuffer* getReadBuffer() {return read_buffer;}
 
     static void randColor(int *r, int *g, int *b);
-    
+
+    //Drawing functions
+    void drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool fill = true);
+    void drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int r, int g, int b, bool fill=true);
 };
 
 doubleBuffer::doubleBuffer()
@@ -172,6 +178,58 @@ void doubleBuffer::randColor(int *r, int *g, int *b)
   *g = g_;
   *b = b_;
 }
+void doubleBuffer::drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool fill)
+{
+  if (v0.x > v1.x || v0.y > v1.y || v0.z > v1.z)
+    return;
+  for (int i=v0.x; i <= v1.x; i++)
+  {
+    if (i < 0 || i >= LENGTH)
+      continue;
+    for (int j=v0.y; j <= v1.y; j++)
+    {
+      if (j < 0 || j >= WIDTH)
+        continue;
+      for (int k=v0.z; k <= v1.z; k++)
+      {
+        if (k < 0 || k >= HEIGHT)
+          continue;
+        setColors(i, j, k, r, g, b);
+//        write_buffer->fbuf_[i][j][k][RED] = r;
+//        write_buffer->fbuf_[i][j][k][GREEN] = g;
+//        write_buffer->fbuf_[i][j][k][BLUE] = b;
+      }
+    }
+  }
+}
+void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int r, int g, int b, bool fill)
+{
+  if (x0 > x1 || y0 > y1 || z0 > z1)
+    return;
+  for (int i=x0; i <= x1; i++)
+  {
+    SerialUSB.print("i: ");
+    SerialUSB.println(i);
+    if (i < 0 || i >= LENGTH)
+      continue;
+    for (int j=y0; j <= y1; j++)
+    {
+      SerialUSB.print("j: ");
+      SerialUSB.println(j);
+      if (j < 0 || j >= WIDTH)
+        continue;
+      for (int k=z0; k <= z1; k++)
+      {
+        SerialUSB.print("k: ");
+        SerialUSB.println(k);
+        if (k < 0 || k >= HEIGHT)
+          continue;
+        setColors(i, j, k, r, g, b);
+      }
+    }
+  }
+}
+
 void driveLEDS(int buf_idx, int *buf_offset, doubleBuffer* frame_buffer, SPIClass* mySPI)
 {
   frameBuffer* read_buffer = frame_buffer->getReadBuffer();
@@ -206,5 +264,7 @@ void driveLEDS(int buf_idx, int *buf_offset, doubleBuffer* frame_buffer, SPIClas
   mySPI->endTransaction();
   //buf_idx++;
 }
+
+
 
 #endif

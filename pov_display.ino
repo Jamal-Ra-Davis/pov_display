@@ -3,6 +3,7 @@
 #include "FrameBuffer.h"
 #include "Text.h"
 #include "test_animations.h"
+#include "Vector3d.h"
 
 #define NUMPIXELS 24 // Number of LEDs in strip
 //#define BLUE 2
@@ -153,6 +154,8 @@ void sercomSetup()
 }
 void setup()
 {
+  SerialUSB.begin(9600);
+  //while(!SerialUSB);
   Serial1.begin(9600);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
@@ -317,8 +320,10 @@ int pos_z = 4;
 
 int button_states[3];
 bool press_state[3] = {false, false, false};
+void block_test();
 void loop() 
 {
+  block_test();
   /* 
   for (int i=0; i<3; i++)
   {
@@ -761,4 +766,89 @@ void hallTrigger()
   //return;
 }
 
+void block_test()
+{
+  SerialUSB.println("Entering blocktest");
+  //Vector3d(0, 0, 0);
+  //Vector3d(9, 4, 1);
+//  Vector3d blocks[5][2];
+//  for (int i=0; i<5; i++)
+//  {
+//    int length = rand() % 10;
+//    int width = rand() % 4;
+//    int height = rand() % 3;
+//  }
+
+  Vector3d vec0_s(0, 0, 0), vec0_e(9, 4, 1);
+  int r0, g0, b0;
+  doubleBuffer::randColor(&r0, &g0, &b0);
+  
+  Vector3d vec1_s(15, 0, 3), vec1_e(17, 6, 5);
+  int r1, g1, b1;
+  doubleBuffer::randColor(&r1, &g1, &b1);
+  
+  while(1)
+  {
+    //SerialUSB.print("Vec1 (x, y, z) = ");
+    //SerialUSB.print(vec1_s.x);
+    //SerialUSB.print(",");
+    //SerialUSB.print(vec1_s.y);
+    //SerialUSB.print(",");
+    //SerialUSB.println(vec1_s.z);
+    frame_buffer.clear();
+    //doubleBuffer::randColor(&r1, &g1, &b1);
+    //frame_buffer.drawBlock(Vector3d(0, 0, 0), Vector3d(9, 4, 1), r1, g1, b1);
+    //frame_buffer.drawBlock(Vector3d(15, 0, 3), Vector3d(17, 6, 5), 50, 0, 255);
+
+    frame_buffer.drawBlock(vec0_s, vec0_e, r0, g0, b0);
+    frame_buffer.drawBlock(vec1_s, vec1_e, r1, g1, b1);
+    
+    for (int i=0; i<WIDTH; i++)
+    {
+      frame_buffer.setColors(20, i, 0, 0xFF, 0x00, 0x00);
+      frame_buffer.setColors(20-1, i, 0, 0x80, 0x00, 0xFF);
+    }
+    frame_buffer.update();
+    
+
+    vec0_s.addVector3d(1, 0, 0);
+    vec0_e.addVector3d(1, 0, 0);
+    vec1_s.addVector3d(1, 0, 0);
+    vec1_e.addVector3d(1, 0, 0);
+    if (vec0_s.x > LENGTH)
+    {
+      //vec0_s.setVector3d(0, 0, 0);
+      //vec0_e.setVector3d(9, 4, 1);
+
+      vec0_s.addVector3d(-(LENGTH+10), 0, 0);
+      vec0_e.addVector3d(-(LENGTH+10), 0, 0);
+      doubleBuffer::randColor(&r0, &g0, &b0);
+    }
+    if (vec1_s.x > LENGTH)
+    {
+      //vec1_s.setVector3d(15, 0, 3);
+      //vec1_e.setVector3d(17, 6, 5);
+
+      vec1_s.addVector3d(-(LENGTH+10), 0, 0);
+      vec1_e.addVector3d(-(LENGTH+10), 0, 0);
+      doubleBuffer::randColor(&r1, &g1, &b1);
+    }
+  
+    delay(20);
+  }
+  
+  /*
+  while(1)
+  {
+    frame_buffer.clear();
+    for (int i=0; i<WIDTH; i++)
+    {
+      frame_buffer.setColors(20, i, 0, 0xFF, 0x00, 0x00);
+      frame_buffer.setColors(20-1, i, 0, 0x80, 0x00, 0xFF);
+    }
+    frame_buffer.update();
+    delay(100);
+  }
+  */
+}
 
