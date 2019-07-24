@@ -5,7 +5,7 @@ class Vector3d
 {
   public:
     int x, y, z;
-    Vector3d();
+    Vector3d(){}
     Vector3d(int x_, int y_, int z_) {x = x_;y=y_;z=z_;}
 
     void setVector3d(int x_, int y_, int z_) {x = x_;y=y_;z=z_;}
