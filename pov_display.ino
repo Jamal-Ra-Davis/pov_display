@@ -1,10 +1,13 @@
 #include <SPI.h>
+#include <math.h>
 #include "wiring_private.h" // pinPeripheral() function
 #include "FrameBuffer.h"
 #include "Text.h"
 #include "test_animations.h"
 #include "Vector3d.h"
 #include "HSV.h"
+#include "Space_Game.h"
+#include "Events.h"
 
 #define NUMPIXELS 24 // Number of LEDs in strip
 //#define BLUE 2
@@ -326,6 +329,115 @@ void endless_runner();
 void ship_game();
 void loop() 
 {
+  int offset = 0;
+  int r__=128;
+  int g__=128;
+  int b__=128;
+  char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
+  int word_idx = 0;
+  while(1)
+  {
+    frame_buffer.clear();
+    
+    
+
+    switch (rand() % 6)
+    {
+      case 0:
+        r__ += 2;
+        if (r__ > 255)
+          r__ = 255;
+        break;
+      case 1:
+        r__ -= 2;
+        if (r__ < 0)
+          r__ = 0;
+        break;
+      case 2:
+        g__ += 2;
+        if (g__ > 255)
+          g__ = 255;
+        break;
+      case 3:
+        g__ += 2;
+        if (g__ > 255)
+          g__ = 255;
+        break;
+      case 4:
+        b__ += 2;
+        if (b__ > 255)
+          b__ = 255;
+        break;
+      case 5:
+        b__ += 2;
+        if (b__ > 255)
+          b__ = 255;
+        break;
+    }
+    writeString(words[word_idx], 0, 0, r__, g__, b__, &frame_buffer);
+    frameBuffer *fb = frame_buffer.getWriteBuffer();
+    for (int i=0; i<LENGTH; i++)
+    {
+      int i_ = (i + offset)/2 % 10;
+      int h_idx;
+      if (i_ < 6)
+      {
+        h_idx = i_;
+      }
+      else
+      {
+        h_idx = 10 - i_;
+      }
+      for (int j=0; j<WIDTH; j++)
+      {
+        for (int k=0; k<h_idx; k++)
+        {
+        fb->fbuf_[i][j][k][RED] = fb->fbuf_[i][j][0][RED];
+        fb->fbuf_[i][j][k][GREEN] = fb->fbuf_[i][j][0][GREEN];
+        fb->fbuf_[i][j][k][BLUE] = fb->fbuf_[i][j][0][BLUE];
+        }
+      }
+    }
+    frame_buffer.update();
+    offset++;
+    if (offset >= LENGTH)
+    {
+      offset = 0;
+      word_idx++;
+      if (word_idx >= 4)
+        word_idx = 0;
+    }
+    delay(100);
+  }
+/*  
+  for (int a=1; a<=LENGTH; a++)
+  {
+  frame_buffer.clear();
+  for (int i=0; i<a; i++)
+  {
+    int r, g, b;
+    doubleBuffer::randColor(&r, &g, &b);
+    int i_ = i % 10;
+    int h_idx;
+    if (i_ < 6)
+    {
+      h_idx = i_;
+    }
+    else
+    {
+      h_idx = 10 - i_;
+    }
+    for (int j=0; j<WIDTH; j++)
+    {
+      frame_buffer.setColors(i, j, h_idx, r, g, b);
+    }
+  }
+  frame_buffer.update();
+  delay(200);
+  }
+*/
+  
+  ship_loop(&frame_buffer);
   ship_game();
 
   
@@ -1097,6 +1209,9 @@ void ship_game()
    Vector3d pos(0, 4, 3);
    Vector3d vel(1, 0, 0);
 
+   float color_scale;
+   float color_idx = 0;
+
    Vector3d stars[10];
    for (int i=0; i<10; i++)
    {
@@ -1233,7 +1348,8 @@ void ship_game()
       {
         
       }
-  
+
+      
       for (int i=0; i<5; i++)
       {
         if (active_bullets[i] >= 0)
@@ -1243,16 +1359,23 @@ void ship_game()
       }
 
 
-      
+      color_scale = sin(2*M_PI*color_idx);
+      color_idx += 0.001;
+      /*
+      if (color_idx >= 1.0)
+      {
+        color_idx = 0;
+      }
+      */
       for (int i=0; i<LENGTH; i++)
       {
         //0, 1, 2, 3, 4, 5,
         for (int k=0; k<HEIGHT/2; k++)
         {
-          frame_buffer.setColors(i, 0, k, 255, 255, 0); 
+          frame_buffer.setColors(i, 0, k, 255, (uint8_t)(255*color_scale), 0); 
           if (k < HEIGHT/2-1)
           {
-            frame_buffer.setColors(i, 1, k, 255, 255, 0);
+            frame_buffer.setColors(i, 1, k, 255, (uint8_t)(255*color_scale), 0);
           }
         }
       }
