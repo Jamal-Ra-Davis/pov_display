@@ -3,6 +3,7 @@
 
 #include "Vector3d.h"
 #include "FrameBuffer.h"
+#include "Events.h"
 
 class Bullet
 {
@@ -50,6 +51,7 @@ void Bullet::update()
     return;
 
   pos.x += vel;
+  pos.y--;
   if (pos.x >= LENGTH)
   {
     pos.x %= LENGTH;
@@ -58,6 +60,12 @@ void Bullet::update()
   {
     pos.x += LENGTH;
   }
+
+  if (pos.y < 0)
+  {
+    lifetime = 0;
+  }
+  
   lifetime--;
 }
 void Bullet::draw(doubleBuffer *frame_buffer)
@@ -84,6 +92,7 @@ class Ship
         Bullet bullets[NUM_BULLETS];
         
     public:
+        enum BUTTONS{DUMMY, LEFT, FIRE, RIGHT, UP, DOWN};
         Ship();
         Ship(Vector3d pos_, Vector3d vel_);
         void reset(Vector3d pos_, Vector3d vel_);
@@ -288,79 +297,79 @@ void Ship::draw(doubleBuffer *frame_buffer)
 }
 void Ship::getSerialData()
 {
-  while (Serial1.available())
+  while (!eventBuffer.isEmpty())
   {
-    if (Serial1.available() > 1)
+    Event e;
+    if (!eventBuffer.pop(e))
     {
-      char c0 = Serial1.read();
-      char c1 = Serial1.read();
-      switch (c0)
+      //Handle some error condition
+    }
+    
+    switch (e.type)
+    {
+      case Event::ON_PRESS:
       {
-        case '1':
+        switch(e.button_idx)
         {
-          if (c1 == 'p')
+          case LEFT:
           {
             setLeft(true);
+            break;
           }
-          else if(c1 == 'r')
-          {
-            setLeft(false);
-          }
-          break;
-        }
-        case '2':
-        {
-          if (c1 == 'p')
+          case FIRE:
           {
             setFire(true);
+            break;
           }
-          else if(c1 == 'r')
-          {
-
-          }
-          break;
-        }
-        case '3':
-        {
-          if (c1 == 'p')
+          case RIGHT:
           {
             setRight(true);
+            break;
           }
-          else if(c1 == 'r')
-          {
-            setRight(false);
-          }
-          break;
-        }
-        case '4':
-        {
-          if (c1 == 'p')
+          case UP:
           {
             setUp(true);
+            break;
           }
-          else if(c1 == 'r')
-          {
-            setUp(false);
-          }
-          break;
-        }
-        case '5':
-        {
-          if (c1 == 'p')
+          case DOWN:
           {
             setDown(true);
+            break;
           }
-          else if(c1 == 'r')
+        }
+        break;
+      }
+      case Event::ON_RELEASE:
+      {
+        switch(e.button_idx)
+        {
+          case LEFT:
+          {
+            setLeft(false);
+            break;
+          }
+          case FIRE:
+          {
+            break;
+          }
+          case RIGHT:
+          {
+            setRight(false);
+            break;
+          }
+          case UP:
+          {
+            setUp(false);
+            break;
+          }
+          case DOWN:
           {
             setDown(false);
+            break;
           }
-          break;
         }
+        break;
       }
-    }
-    else
-    {
-      Serial1.read();
     }
   }
 }
@@ -398,10 +407,13 @@ void ship_loop(doubleBuffer *frame_buffer)
   uint8_t block_color[3] = {70, 100, 70};
   bool block_collide = false;
   int hits = 5;
+  int block_vel = 1;
+  int block_update = 0;
   
   int i=0;
   while(1)
   {
+    SerialUSB.println("Ship Loop");
     /*
     i++;
     if (i >= 10)
@@ -411,10 +423,31 @@ void ship_loop(doubleBuffer *frame_buffer)
       
     }
     */
+    Event::SerialParser();
     ship.getSerialData();
 
     
     ship.update();
+    /*
+    if (block_update == 2)
+    {
+      if (vel > 0)
+      {
+        block[0].z++;
+        if (block[0].z >= HEIGHT)
+        {
+          vel *= -1;
+          block[0].z = HEIGHT - 2;
+        }
+      }
+      else
+      {
+        
+      }
+      block_update = 0;
+    }
+    block_update++;
+    */
     block_collide = ship.checkBlockCollision(block);
     if (block_collide)
     {

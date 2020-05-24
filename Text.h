@@ -1,12 +1,12 @@
 #ifndef TEXT_LIB
 #define TEXT_LIB
 
-//#include <stdlib.h>
 #include "FrameBuffer.h"
 #define CHAR_WIDTH 8
 
 enum CHAR_TYPE {LETTER, NUMBER};
 
+//TODO: CHAR_WIDTH doesn't need to be so big, biggest right now is 5
 const static uint8_t NUM_BUF[10][CHAR_WIDTH] = {
                             {0x00, 0x00, 0x3C, 0x42, 0x42, 0x3C, 0x00, 0x00},//0
                             {0x00, 0x00, 0x00, 0x22, 0x7E, 0x02, 0x00, 0x00},//1
@@ -58,57 +58,6 @@ int resolveChar(char c)
   return -1;
 }
 
-void writeString(char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t b)// int bound_h=LENGTH, int bound_l=0
-{
-  if (layer < 0 || layer >= HEIGHT)
-    return;
-
-  
-  int LEN = strlen(str);
-  if (LEN <= 0)
-    return;
-
-  
-  int pos;
-  for (int c=0; c<LEN; c++)
-  {
-    char c_ = str[c];
-    int type = resolveChar(c_);
-    if (type < 0)
-      continue;
-
-    for (int i=0; i<CHAR_WIDTH; i++)
-    {
-      pos = 8*c + i + offset;
-      if (pos < 0)
-        continue;
-      if (pos >= LENGTH)
-        return;
-
-      //fbuf[pos][4][2][RED] = 255;
-      //continue;
-
-      uint8_t char_slice;
-      if (type == LETTER)
-        char_slice = CHAR_BUF[c_-65][i];
-      else if (type == NUMBER)
-        char_slice = NUM_BUF[c_-48][i];
-      else
-        continue;
-
-        
-      for (int j=0; j<8; j++)
-      {
-        if ((1 << j) & (char_slice))
-        {
-          fbuf[pos][j][layer][RED] = r;
-          fbuf[pos][j][layer][GREEN] = g;
-          fbuf[pos][j][layer][BLUE] = b;
-        }
-      }
-    }
-  }
-}
 
 void writeString(char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t b, doubleBuffer* frame_buffer)// int bound_h=LENGTH, int bound_l=0
 {
@@ -137,9 +86,6 @@ void writeString(char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t
       if (pos >= LENGTH)
         return;
 
-      //fbuf[pos][4][2][RED] = 255;
-      //continue;
-
       uint8_t char_slice;
       if (type == LETTER)
         char_slice = CHAR_BUF[c_-65][i];
@@ -148,15 +94,10 @@ void writeString(char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t
       else
         continue;
 
-
-        
       for (int j=0; j<8; j++)
       {
         if ((1 << j) & (char_slice))
         {
-          //fbuf[pos][j][layer][RED] = r;
-          //fbuf[pos][j][layer][GREEN] = g;
-          //fbuf[pos][j][layer][BLUE] = b;
           frame_buffer->setColors(pos, j, layer, r, g, b);
         }
       }

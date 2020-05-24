@@ -3,7 +3,7 @@
 
 #include "RingBuf.h"
 
-//enum EVENT{B0_ON_PRESS, B0_ON_RELEASE, B1_ON_PRESS, B1_ON_RELEASE, ON_PRESS, ON_RELEASE};
+
 
 class Event;
 
@@ -33,22 +33,39 @@ Event::Event(EVENT t, uint8_t b)
 
 extern RingBuf<Event, 32> eventBuffer;
 RingBuf<Event, 32> eventBuffer;
-
+char serialBuf[2];
+int ser_idx = 0;
 
 void Event::SerialParser()
 {
-  while (Serial1.available() > 0)
+  while(Serial1.available())
   {
-		char c = Serial1.read();
-		int idx = Serial.parseInt();
-		if (Serial.read() == '\n')
-		{
-			if (c == 'p')
-				eventBuffer.push(Event(Event::ON_PRESS, idx));
-			else if (c == 'r')
-				eventBuffer.push(Event(Event::ON_RELEASE, idx));
-		}
-	}
+    char c = Serial1.read();
+    serialBuf[ser_idx%2] = c;
+    ser_idx++;
+    if (ser_idx >= 4)
+      ser_idx -= 2;
+
+    if (ser_idx >= 2)
+    {
+      if (serialBuf[1] >= 48 && serialBuf[1] <= 57)//Ascii: 0-9
+      {
+        int idx = serialBuf[1] - 48;
+        if (serialBuf[0] == 'p')
+        {
+          eventBuffer.push(Event(Event::ON_PRESS, idx));
+          SerialUSB.print("ON_PRESS: ");
+          SerialUSB.println(idx);
+        }
+        if (serialBuf[0] == 'r')
+        {
+          eventBuffer.push(Event(Event::ON_RELEASE, idx));
+          SerialUSB.print("ON_RELEASE: ");
+          SerialUSB.println(idx);
+        }
+      }
+    }
+  }
 }
 
 
