@@ -9,7 +9,7 @@
 #include "Space_Game.h"
 #include "Events.h"
 #include "Snake.h"
-
+#include "DMA_SPI.h"
 
 #define LED_PIN 9
 #define HALL_PIN 6
@@ -20,7 +20,7 @@
 
 
 volatile uint8_t buf_idx = 0;
-volatile int buf_offset[HEIGHT] = {20, 30, 40, 50, 0, 10};
+const int buf_offset[HEIGHT] = {20, 30, 40, 50, 0, 10};
 
 doubleBuffer frame_buffer;
 
@@ -63,11 +63,13 @@ void setup()
 {
   SerialUSB.begin(9600);
   //while(!SerialUSB);
-  Serial1.begin(9600);
+  //Serial1.begin(9600);    //Hold off on until you know it's using a different SERCOM than SPI
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   frame_buffer.reset();
   sercomSetup();
+  init_dma();
+  mySPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
   hallEffectSetup();
   startTimer(1800);
   frame_buffer.reset();
@@ -86,7 +88,15 @@ void endless_runner();
 void ship_game();
 void loop() 
 {
-  ship_loop(&frame_buffer);
+  /*
+  while(!transfer_complete);
+  start_dma_transaction();
+  delay(10);
+  return;
+  */
+
+  
+  block_test();
   return;
   
   frame_buffer.forceSingleBuffer();
@@ -235,8 +245,14 @@ void TC3_Handler() {
       digitalWrite(LED_PIN, LOW);
     if (buf_idx >= LENGTH)
         return;
+    if (!transfer_complete)
+    {
+      buf_idx++;
+      return;
+    }
   
-    driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+    //driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+    start_dma_transaction();
     buf_idx++;
   }
 }
@@ -249,9 +265,15 @@ void hallTrigger()
   //Reset timer to zero
   TcCount16* TC = (TcCount16*) TC3;
   TC->COUNT.reg = 0;
+
+  if (!transfer_complete)
+  {
+    buf_idx = 1;
+    return;
+  }
   
-  
-  driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+  //driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
+  start_dma_transaction();
   buf_idx = 1;
   while (TC->STATUS.bit.SYNCBUSY == 1);
   return;
@@ -263,8 +285,15 @@ void hallTrigger()
     timer_delta = 15000;
   timer_0 = timer_temp;
   */
-  //buf_idx = 0; 
-  //startTimerPeriod(timer_delta/LENGTH);
+  /*
+  uint16_t period_us = timer_delta/LENGTH;
+  buf_idx = 1; 
+  int compareValue = ((CPU_HZ_SCALE*period_us) / TIMER_PRESCALER_DIV) - 1;
+  TcCount16* TC = (TcCount16*) TC3;
+  TC->CC[0].reg = compareValue;
+  while (TC->STATUS.bit.SYNCBUSY == 1);
+  */
+
   //return;
 }
 
