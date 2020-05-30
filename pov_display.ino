@@ -14,14 +14,18 @@
 #define LED_PIN 9
 #define HALL_PIN 6
 #define CPU_HZ 48000000
+#define CPU_HZ_DIV 6000000
 #define TIMER_PRESCALER_DIV 1024
 
 #define CPU_HZ_SCALE 48ull
+#define CPU_HZ_SCALE_DIV 6ull
 
+#define MAX_PERIOD_US 100000ULL
+#define MIN_PERIOD_US 16666ULL
 
 volatile uint8_t buf_idx = 0;
 const int buf_offset[HEIGHT] = {20, 30, 40, 50, 0, 10};
-
+//const int buf_offset[HEIGHT] = {30, 45, 60, 75, 0, 15};
 doubleBuffer frame_buffer;
 
 int hall;
@@ -145,7 +149,8 @@ void loop()
 
 
 void setTimerFrequency(int frequencyHz) {
-  int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
+  //int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
+  int compareValue = (CPU_HZ_DIV / frequencyHz) - 1;
   TcCount16* TC = (TcCount16*) TC3;
   
   // Make sure the count is in a proportional position to where it was
@@ -155,7 +160,7 @@ void setTimerFrequency(int frequencyHz) {
   while (TC->STATUS.bit.SYNCBUSY == 1);
 }
 void setTimerPeriod(int period_us) {//period in us
-  int compareValue = ((CPU_HZ_SCALE*period_us) / TIMER_PRESCALER_DIV) - 1;
+  int compareValue = (CPU_HZ_SCALE_DIV*period_us) - 1;
   TcCount16* TC = (TcCount16*) TC3;
   
   // Make sure the count is in a proportional position to where it was
@@ -183,7 +188,7 @@ void startTimer(int frequencyHz) {
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
   // Set prescaler to 1024
-  TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
+  TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV8;
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
   setTimerFrequency(frequencyHz);
@@ -217,7 +222,7 @@ void startTimerPeriod(int period_us) {
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
   // Set prescaler to 1024
-  TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
+  TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV8;
   while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
   setTimerPeriod(period_us);
@@ -265,34 +270,40 @@ void hallTrigger()
   //Reset timer to zero
   TcCount16* TC = (TcCount16*) TC3;
   TC->COUNT.reg = 0;
-
+  long timer_temp = micros();
+  
   if (!transfer_complete)
   {
     buf_idx = 1;
+    timer_0 = timer_temp;
     return;
   }
   
   //driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
   start_dma_transaction();
   buf_idx = 1;
-  while (TC->STATUS.bit.SYNCBUSY == 1);
-  return;
+  //while (TC->STATUS.bit.SYNCBUSY == 1);
+  //return;
   
-  /*
-  long timer_temp = micros();
+  
+  
   timer_delta = timer_temp - timer_0;
-  if (timer_delta < 15000)
-    timer_delta = 15000;
   timer_0 = timer_temp;
-  */
-  /*
+  if (timer_delta < MIN_PERIOD_US)
+  {
+    timer_delta = MIN_PERIOD_US;
+  }
+  else if (timer_delta > MAX_PERIOD_US)
+  {
+    timer_delta = MAX_PERIOD_US;
+  }
+  
+  
   uint16_t period_us = timer_delta/LENGTH;
-  buf_idx = 1; 
-  int compareValue = ((CPU_HZ_SCALE*period_us) / TIMER_PRESCALER_DIV) - 1;
-  TcCount16* TC = (TcCount16*) TC3;
+  uint16_t compareValue = (CPU_HZ_SCALE_DIV*period_us) - 1;
   TC->CC[0].reg = compareValue;
   while (TC->STATUS.bit.SYNCBUSY == 1);
-  */
+  
 
   //return;
 }
@@ -316,8 +327,8 @@ void block_test()
    
     for (int i=0; i<WIDTH; i++)
     {
-      frame_buffer.setColors(20, i, 0, 0xFF, 0x00, 0x00);
-      frame_buffer.setColors(20-1, i, 0, 0x80, 0x00, 0xFF);
+      frame_buffer.setColors(buf_offset[0], i, 0, 0xFF, 0x00, 0x00);
+      frame_buffer.setColors(buf_offset[0]-1, i, 0, 0x80, 0x00, 0xFF);
     }
     frame_buffer.update();
     
