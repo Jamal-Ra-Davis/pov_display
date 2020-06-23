@@ -42,8 +42,10 @@ struct pixel_array {
   uint8_t footer[HEAD_FOOT_SZ];
 };
 
-uint8_t dma_buffer[sizeof(struct pixel_array)]; 
-struct pixel_array* pArray = (struct pixel_array*)dma_buffer;
+uint8_t dma_buffer0[sizeof(struct pixel_array)];
+uint8_t dma_buffer1[sizeof(struct pixel_array)];  
+struct pixel_array* pArray_curr = (struct pixel_array*)dma_buffer0;
+struct pixel_array* pArray_next = (struct pixel_array*)dma_buffer1;
 
 static void init_pArray(struct pixel_array* pArray)
 {
@@ -60,6 +62,13 @@ static void init_pArray(struct pixel_array* pArray)
   }
 }
 
+static inline void swap_dma_buffer()
+{
+  struct pixel_array* temp = pArray_curr;
+  pArray_curr = pArray_next;
+  pArray_next = temp;
+}
+
 void setup_dma_channel()
 {
   dmaDescriptorArray[0].bt_ctrl = (1 << 0)  | //Valid
@@ -71,7 +80,7 @@ void setup_dma_channel()
                                   (1 << 12) | //STEPSEL=SRC: Step selection
                                   (0 << 13);  //Step size = X1 
   dmaDescriptorArray[0].bt_cnt = sizeof(struct pixel_array);
-  dmaDescriptorArray[0].src_addr = (uint32_t)(dma_buffer + sizeof(struct pixel_array));
+  dmaDescriptorArray[0].src_addr = (uint32_t)((uint8_t*)pArray_curr + sizeof(struct pixel_array));
   dmaDescriptorArray[0].dst_addr = (uint32_t)&(SERCOM1->SPI.DATA.reg);
   dmaDescriptorArray[0].desc_addr = 0;
 }
@@ -118,7 +127,8 @@ void init_dma()
   
   DMAC->CHINTENSET.bit.TCMPL = 1;
 
-  init_pArray(pArray);
+  init_pArray(pArray_curr);
+  init_pArray(pArray_next);
   
   NVIC_EnableIRQ(DMAC_IRQn);
 }
@@ -145,12 +155,8 @@ void DMAC_Handler()
   DMAC->CHINTFLAG.bit.TCMPL = 1;
 
   //Setup next transfer array
-  int next_idx = buf_idx;
-  if (next_idx >= LENGTH)
-  {
-    next_idx = 0;
-  }
-  convert_fb_to_dma(next_idx, buf_offset, frame_buffer.getReadBuffer(), pArray);
+  swap_dma_buffer();
+  dmaDescriptorArray[0].src_addr = (uint32_t)((uint8_t*)pArray_curr + sizeof(struct pixel_array));
   transfer_complete = true;
 }
 
