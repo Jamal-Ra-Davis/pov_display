@@ -5,7 +5,7 @@
 
 enum COLORS {RED, GREEN, BLUE, NUM_COLORS};
 
-#define LENGTH 60
+#define LENGTH 96
 #define WIDTH 8
 #define HEIGHT 6
 
@@ -62,6 +62,7 @@ class doubleBuffer
     //Drawing functions
     void drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool fill = true);
     void drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int r, int g, int b, bool fill=true);
+    void drawLine(Vector3d p0, Vector3d p1, int r, int g, int b);
 };
 
 doubleBuffer::doubleBuffer()
@@ -202,6 +203,170 @@ void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int
           continue;
         setColors(i, j, k, r, g, b);
       }
+    }
+  }
+}
+void doubleBuffer::drawLine(Vector3d p0, Vector3d p1, int r, int g, int b)
+{
+  enum AXIS {LX, LY, LZ};
+  
+  Vector3d del = Vector3d::subVector3d(p1, p0);
+  float mag = sqrt((del.x*del.x) + (del.y*del.y) + (del.z*del.z));
+  float ratio_x = del.x / mag;
+  if (ratio_x < 0)
+    ratio_x *= -1;
+  float ratio_y = del.y / mag;
+  if (ratio_y < 0)
+    ratio_y *= -1;
+  float ratio_z = del.z / mag;
+  if (ratio_z < 0)
+    ratio_z *= -1;
+
+  Serial1.print("ratiox: ");
+  Serial1.println(ratio_x);
+  Serial1.print("ratioy: ");
+  Serial1.println(ratio_y);
+  Serial1.print("ratioz: ");
+  Serial1.println(ratio_z);
+  
+  Serial1.print("delx: ");
+  Serial1.println(del.x);
+  Serial1.print("dely: ");
+  Serial1.println(del.y);
+  Serial1.print("delz: ");
+  Serial1.println(del.z);
+
+  Serial1.print("mag: ");
+  Serial1.println(mag);
+  
+  enum AXIS axis = LX;
+  if ((ratio_y > ratio_x) && (ratio_y > ratio_z))
+  {
+    axis = LY;
+  }
+  else if((ratio_z > ratio_x) && (ratio_z > ratio_y))
+  {
+    axis = LZ;
+  }
+
+  Vector3d from = p0;
+  Vector3d to = p1;
+  /*
+  if (p0.x > p1.x)
+  {
+    from.x = p1.x;
+    to.x = p0.x;
+  }
+  if (p0.y > p1.y)
+  {
+    from.y = p1.y;
+    to.y = p0.y;
+  }
+  if (p0.z > p1.z)
+  {
+    from.z = p1.z;
+    to.z = p0.z;
+  }
+  */
+
+  switch (axis)
+  {
+    case LX:
+    {
+      Serial1.println("LX");
+      if (p0.x > p1.x)
+      {
+        from = p1;
+        to = p0;
+      }
+      int y_idx = from.y;
+      int z_idx = from.z;
+      float slope_y = (1.0*del.y)/del.x;
+      //if (slope_y < 0)
+      //  slope_y *= -1;
+      float slope_z = (1.0*del.z)/del.x;
+      //if (slope_z < 0)
+      //  slope_z *= -1;
+        
+      for (int x_idx = from.x; x_idx <= to.x; x_idx++)
+      {
+        //Need to handle wrapping in x axis, should be able to support numbers larger or smaller than LENGTH bounds
+        //Will need to test for wrapping to know what to do
+        int y_val = (int)(slope_y * (x_idx - from.x) + 0.5) + from.y; 
+        int z_val = (int)(slope_z * (x_idx - from.x) + 0.5) + from.z;
+        if (x_idx == from.x)
+          setColors(from.x, from.y, from.z, r, g, b);
+        else
+          setColors(x_idx, y_val, z_val, r, g, b);
+        Serial1.print("x_idx: ");
+        Serial1.print(x_idx);
+        Serial1.print(", y_val: ");
+        Serial1.print(y_val);
+        Serial1.print(", z_val: ");
+        Serial1.println(z_val);
+        Serial1.println();
+      }
+      break;
+    }
+    case LY:
+    {
+      Serial1.println("LY");
+      if (p0.y > p1.y)
+      {
+        from = p1;
+        to = p0;
+      }
+      int x_idx = from.x;
+      int z_idx = from.z;
+      float slope_x = (1.0*del.x)/del.y;
+      //if (slope_x < 0)
+      //  slope_x *= -1;
+      float slope_z = (1.0*del.z)/del.y;
+      //if (slope_z < 0)
+      //  slope_z *= -1;
+        
+      for (int y_idx = from.y; y_idx <= to.y; y_idx++)
+      {
+        //Need to handle wrapping in x axis, should be able to support numbers larger or smaller than LENGTH bounds
+        //Will need to test for wrapping to know what to do
+        int x_val = (int)(slope_x * (y_idx - from.y) + 0.5) + from.x; 
+        int z_val = (int)(slope_z * (y_idx - from.y) + 0.5) + from.z;
+        if (y_idx == from.y)
+          setColors(from.x, from.y, from.z, r, g, b);
+        else
+          setColors(x_val, y_idx, z_val, r, g, b);
+      }
+      break;
+    }
+    case LZ:
+    {
+      Serial1.println("LZ");
+      if (p0.z > p1.z)
+      {
+        from = p1;
+        to = p0;
+      }
+      int x_idx = from.x;
+      int y_idx = from.y;
+      float slope_x = (1.0*del.x)/del.z;
+      //if (slope_x < 0)
+      //  slope_x *= -1;
+      float slope_y = (1.0*del.y)/del.z;
+      //if (slope_y < 0)
+      //  slope_y *= -1;
+        
+      for (int z_idx = from.z; z_idx <= to.z; z_idx++)
+      {
+        //Need to handle wrapping in x axis, should be able to support numbers larger or smaller than LENGTH bounds
+        //Will need to test for wrapping to know what to do
+        int x_val = (int)(slope_x * (z_idx - from.z) + 0.5) + from.x; 
+        int y_val = (int)(slope_y * (z_idx - from.z) + 0.5) + from.y;
+        if (z_idx == from.z)
+          setColors(from.x, from.y, from.z, r, g, b);
+        else
+          setColors(x_val, y_val, z_idx, r, g, b);
+      }
+      break;
     }
   }
 }
