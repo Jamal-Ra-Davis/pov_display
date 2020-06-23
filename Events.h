@@ -3,14 +3,6 @@
 
 #include "RingBuf.h"
 
-
-
-class Event;
-
-
-
-
-
 class Event
 {
   public:

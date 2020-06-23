@@ -2,7 +2,7 @@
 #define TEST_ANI_LIB
 
 #include "FrameBuffer.h"
-
+#include "Vector3d.h"
 
 void textAnimation(doubleBuffer *frame_buffer)
 {
@@ -370,6 +370,161 @@ void draw_triange_wave(doubleBuffer *frame_buffer)
   }
 }
 
+//Give ball random velocity, it bounces when it collides with edges of display
+//Collisions cause radial hit effect of randome color
+void ball_collision(doubleBuffer *frame_buffer)
+{
+  //setup
+  Vector3d pos(rand()%LENGTH, rand()%WIDTH, rand()%HEIGHT);
+  Vector3d collide_pos;
+  Vector3d vel(1, -1, -1);
+  int r, g, b;
+  doubleBuffer::randColor(&r, &g, &b);
+  char rBuf[4];
+  char gBuf[4];
+  char bBuf[4];
+
+  int r_coll = 0;
+  int g_coll = 0;
+  int b_coll = 0;
+  
+  int walls[2][2] = {{20, 0}, {60, 1}};
+  
+
+  //loop
+  while(1)
+  {
+    bool collide = false;
+    //Update game logic
+    pos.addVector3d(vel);
+
+    if (pos.x >= LENGTH)
+    {
+      pos.x = 0;
+    }
+    if (pos.x < 0)
+    {
+      pos.x = LENGTH - 1;
+    }
+    
+    if (pos.y < 0)
+    {
+      pos.y = 0;
+      vel.y *= -1;
+      collide = true;
+    }
+    if (pos.y >= WIDTH)
+    {
+      pos.y = WIDTH - 1; 
+      vel.y *= -1;
+      collide = true;
+    }
+
+    if (pos.z < 0)
+    {
+      pos.z = 0;
+      vel.z *= -1;
+      collide = true;
+    }
+    if (pos.z >= HEIGHT)
+    {
+      pos.z = HEIGHT - 1;
+      vel.z *= -1;
+      collide = true; 
+    }
+
+    if (pos.x == walls[0][0] && pos.y < 4)
+    {
+      vel.x *= -1;
+      collide = true;
+    }
+    if (pos.x == walls[1][0] && pos.y >= 4)
+    {
+      vel.x *= -1;
+      collide = true;
+    }
+
+
+    //Dim the colors
+    if (r_coll > 0)
+    {
+      r_coll -= 16;
+    }
+    if (r_coll < 0)
+    {
+      r_coll = 0;
+    }
+    if (b_coll > 0)
+    {
+      b_coll -= 16;
+    }
+    if (b_coll < 0)
+    {
+      b_coll = 0;
+    }
+    if (g_coll > 0)
+    {
+      g_coll -= 16;
+    }
+    if (g_coll < 0)
+    {
+      g_coll = 0;
+    }
+
+
+    if (collide && (r_coll == 0 && b_coll == 0 && g_coll == 0))
+    {
+      collide_pos = pos;
+      doubleBuffer::randColor(&r_coll, &g_coll, &b_coll);
+    }
+
+    sprintf(rBuf, "%d", pos.x);
+    sprintf(gBuf, "%d", pos.y);
+    sprintf(bBuf, "%d", pos.z);
+
+    //Draw stuff
+    frame_buffer->clear();
+    /*
+    for (int i=0; i<LENGTH; i++)
+    {
+      for (int k=0; k<HEIGHT; k++)
+      {
+        if (k == 0 || k == HEIGHT-1)
+          frame_buffer->setColors(i, 0, k, 255, 255, 255);
+        else
+          frame_buffer->setColors(i, 0, k, 12, 12, 12);
+      }
+    }
+    */
+    frame_buffer->drawBlock(Vector3d(walls[0][0], 0, 0), Vector3d(walls[0][0], 3, HEIGHT-1),
+                            255, 255, 255, false);
+    frame_buffer->drawBlock(Vector3d(walls[1][0], 4, 0), Vector3d(walls[1][0], WIDTH-1, HEIGHT-1),
+                            255, 255, 255, false);
+    
+    if (r_coll || b_coll || g_coll)
+    {
+      frame_buffer->setColors(collide_pos.x, collide_pos.y, collide_pos.z, r_coll, g_coll, b_coll);
+    }
+    
+    frame_buffer->setColors(pos.x, pos.y, pos.z, r, g, b);
+    /*
+    writeString(rBuf, 0, 5, 255, 0, 0, frame_buffer);
+    writeString(gBuf, 20, 5, 0, 255, 0, frame_buffer);
+    writeString(bBuf, 40, 5, 0, 0, 255, frame_buffer);
+    */
+
+    for (int i=0; i<8; i++)
+    {
+      for (int j=0; j<8; j++)
+      {
+        frame_buffer->setColors(55 - i, j, 5, sprite0[j][i][RED], sprite0[j][i][GREEN], sprite0[j][i][BLUE]);
+      }
+    }
+    
+    frame_buffer->update();
+    delay(40);
+  }
+}
 
 
 
