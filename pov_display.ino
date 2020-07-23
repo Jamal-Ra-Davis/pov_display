@@ -5,7 +5,7 @@
 #include "Text.h"
 #include "test_animations.h"
 #include "Vector3d.h"
-#include "HSV.h"
+//#include "HSV.h"
 #include "Space_Game.h"
 #include "Events.h"
 #include "Snake.h"
@@ -23,16 +23,15 @@
 #define MAX_PERIOD_US 100000ULL
 #define MIN_PERIOD_US 16666ULL
 
+#define REFRESH_HZ 30
+
 volatile uint8_t buf_idx = 0;
-const int buf_offset[HEIGHT] = {20, 30, 40, 50, 0, 10};
-//const int buf_offset[HEIGHT] = {30, 45, 60, 75, 0, 15};
+const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LENGTH/6), 0*(LENGTH/6), 1*(LENGTH/6)};
 doubleBuffer frame_buffer;
 
 int hall;
 
-//MOSI on Digital 11
-//SCK on 13
-SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
+SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
 
 
 void startTimer(int frequencyHz);
@@ -66,8 +65,7 @@ void sercomSetup()
 void setup()
 {
   SerialUSB.begin(9600);
-  //while(!SerialUSB);
-  //Serial1.begin(9600);    //Hold off on until you know it's using a different SERCOM than SPI
+  Serial1.begin(115200);    //Hold off on until you know it's using a different SERCOM than SPI
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   frame_buffer.reset();
@@ -75,8 +73,10 @@ void setup()
   init_dma();
   mySPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
   hallEffectSetup();
-  startTimer(1800);
+  startTimer(REFRESH_HZ*LENGTH);
   frame_buffer.reset();
+  delay(3000);
+  SerialUSB.println("Exiting setup");
 }
 
 
@@ -86,18 +86,411 @@ void setup()
 /*                                                                   */
 /*********************************************************************/
 
-
+int offset_val = 0;
 void block_test();
 void endless_runner();
 void ship_game();
+float pi_frac = M_PI/16.0;
+
+
 void loop() 
 {
-  /*
-  while(!transfer_complete);
-  start_dma_transaction();
-  delay(10);
+
+  RingBuf<char, 32> serialBuffer;
+  serialBuffer.clear();
+  while(1)
+  {
+  while (Serial1.available())
+  {
+    char c = Serial1.read();
+    if (c == '\n')
+    {
+      //Parse
+      
+      serialBuffer.pop(c);
+      int bytes_remaining = serialBuffer.size();
+      switch(c)
+      {
+        case 'c':
+        {
+          frame_buffer.clear();
+          SerialUSB.println("c");
+          break;
+        }
+        case 'u':
+        {
+          frame_buffer.update();
+          SerialUSB.println("u");
+          break;
+        }
+        case 's':
+        {
+          char parse_buf[32] = {'\0'};
+          int parse_idx = 0;
+          for (parse_idx = 0; parse_idx < bytes_remaining; parse_idx++)
+          {
+            serialBuffer.pop(parse_buf[parse_idx]);
+          }
+          parse_buf[parse_idx] = '\0';
+
+          int x, y, z, r, g, b;
+          sscanf(parse_buf, "%d %d %d %d %d %d", &x, &y, &z, &r, &g, &b);
+          char command[32];
+          sprintf(command, "s %d %d %d %d %d %d\n", x, y, z, (uint8_t)r, (uint8_t)g, (uint8_t)b);
+          SerialUSB.print(command);
+          frame_buffer.setColors(x, y, z, r, g, b);
+          break;
+        }
+        case 'p':
+        case 'r':
+        {
+          char state = c;
+          serialBuffer.pop(c);
+          int idx = (int)c - 48;
+
+          SerialUSB.print(state);
+          SerialUSB.print(idx);
+          
+          if (state == 'p')
+          {
+            eventBuffer.push(Event(Event::ON_PRESS, idx));
+            SerialUSB.print("ON_PRESS: ");
+            SerialUSB.println(idx);
+          }
+          else if (state = 'r')
+          {
+            eventBuffer.push(Event(Event::ON_RELEASE, idx));
+            SerialUSB.print("ON_RELEASE: ");
+            SerialUSB.println(idx);
+          }
+          break;
+        }
+        default:
+        {
+          //Don't recognize first character of packet, clear and move on to next
+          serialBuffer.clear();
+        }
+      }
+    }
+    else
+    {
+      serialBuffer.push(c);
+    }
+  }
+  }
+  
+  while(1)
+  {
+    while(Serial1.available())
+    {
+      if (Serial1.available() < 2)
+        delay(3);
+      char c = Serial1.read();
+      SerialUSB.println(c);
+      switch(c)
+      {
+        case 'c':
+        {
+          //while(Serial1.read() != '\n');
+          frame_buffer.clear();
+          SerialUSB.println("c");
+          break;
+        }
+        case 'u':
+        {
+          //while(Serial1.read() != '\n');
+          frame_buffer.update();
+          SerialUSB.println("u");
+          break;
+        }
+        case 's':
+        {
+          int x = Serial1.parseInt();
+          int y = Serial1.parseInt();
+          int z = Serial1.parseInt();
+          int r = Serial1.parseInt();
+          int g = Serial1.parseInt();
+          int b = Serial1.parseInt();
+          //while(Serial1.read() != '\n');
+          char command[32];
+          sprintf(command, "s %d %d %d %d %d %d\n", x, y, z, (uint8_t)r, (uint8_t)g, (uint8_t)b);
+          SerialUSB.print(command);
+          frame_buffer.setColors(x, y, z, r, g, b);
+          break;
+        }
+        case 'b':
+        case 'r':
+        {
+          char state = c;
+          int idx = (int)Serial1.read() - 48;
+          char dummy = Serial1.read();
+          SerialUSB.print(state);
+          SerialUSB.print(idx);
+          SerialUSB.print(dummy);
+          
+          if (state == 'p')
+          {
+            eventBuffer.push(Event(Event::ON_PRESS, idx));
+            SerialUSB.print("ON_PRESS: ");
+            SerialUSB.println(idx);
+          }
+          else if (state = 'r')
+          {
+            eventBuffer.push(Event(Event::ON_RELEASE, idx));
+            SerialUSB.print("ON_RELEASE: ");
+            SerialUSB.println(idx);
+          }
+          
+          break;
+        }
+        default:
+        {
+          //while(Serial1.read() != '\n');
+        }
+      }
+    }
+  }
+  
+  //random_walk(&frame_buffer);
+  
+  SerialUSB.println("In Loop");
+  SerialUSB.println(rand() % 100);
+  Snake snake_game;
+  
+  //Snake game
+  snake_game.reset();
+  
+  while(1)
+  {
+    
+    snake_game.update();
+    if (snake_game.game_over())
+    {
+      snake_game.reset();
+    }
+    snake_game.draw(&frame_buffer);
+    delay(250);
+  }
+  
+  SerialUSB.println();
+  delay(250);
   return;
-  */
+  
+  
+  //Draw cartesian coord
+  Vector3d p0(-8, 8, 5);
+  Vector3d p1(8, 8, 5);
+  int rad_offset = 5;
+  while(0)
+  {
+    
+  }
+
+  //Clock
+  int sec = 0;
+  int min = 0;
+  int hour = 0;
+  int h_off = 0;
+  int h_up = 1;
+  int h_inc = 0;
+  while(0)
+  {
+    frame_buffer.clear();
+    for (int i=0; i<LENGTH; i++)
+    {
+      frame_buffer.setColors(i, WIDTH-1, h_off, 255, 255, 255);
+      if (i % (LENGTH/12) == 0)
+      {
+        frame_buffer.setColors(i, WIDTH-2, h_off, 255, 255, 255);
+        frame_buffer.setColors(i, WIDTH-3, h_off, 255, 255, 255);
+      }
+    }
+    for (int j=0; j<WIDTH; j++)
+    {
+      //Draw sec hand
+      int sec_idx = (sec*LENGTH)/60;
+      if (j <= WIDTH-3)
+      {
+        frame_buffer.setColors(sec_idx, j, 1+h_off, 0, 0, 255);
+      }
+
+      //Draw min hand
+      int min_idx = (min*LENGTH)/60;
+      if (j <= WIDTH-3)
+      {
+        frame_buffer.setColors(min_idx, j, 2+h_off, 0, 255, 0);
+      }
+
+      //Draw hour hand
+      int hour_idx = (hour*LENGTH)/12;
+      if (j <= WIDTH-5)
+      {
+        frame_buffer.setColors(hour_idx, j, 3+h_off, 255, 0, 0);
+      }
+    }
+
+    frame_buffer.update();
+    sec++;
+    if (sec >= 60)
+    {
+      sec = 0;
+      min++;
+    }
+    if (min >= 60)
+    {
+      min = 0;
+      hour++;
+    }
+    if (hour >= 12)
+    {
+      hour = 0;
+    }
+
+    h_inc++;
+    if ((h_inc % 77) == 0)
+    {
+      if (h_up)
+      {
+        h_off++;
+        if (h_off > 2)
+        {
+          h_off = 2;
+          h_up = 0;
+        }
+      }
+      else
+      {
+        h_off--;
+        if (h_off < 0)
+        {
+          h_off = 0;
+          h_up = 1;
+        }
+      }
+    }
+    
+    delay(10);
+  }
+
+  //3d sine wave
+  int sin_idx = 0;
+  while(1)
+  {
+    frame_buffer.clear();
+    float val2;
+    int g_value;
+    for (int j=0; j<WIDTH; j++)
+    {
+      val2 = 0.5*cos((j+sin_idx)*pi_frac) + 0.5;
+      g_value = (int)(255*val2);  
+    }
+    for (int i=0; i<LENGTH; i++)
+    {
+      float brightness = 0.5*sin((i+sin_idx)*pi_frac) + 0.5;
+      int r_value = (int)(255*brightness);
+      int b_value = (int)((1 - brightness)*255);
+      int height = (int)(brightness*(HEIGHT-1) + 0.5);
+      for (int j=0; j<WIDTH; j++)
+      {
+        frame_buffer.setColors(i, j, height, r_value, g_value, b_value);
+      }
+    }
+    frame_buffer.update();
+    sin_idx++;
+    if (sin_idx == LENGTH)
+      sin_idx = 0;
+    delay(10);
+  }
+
+  
+  Vector3d from(20,0,0);
+  Vector3d to(30, 0, 0);
+  int pi_idx = 0;
+  //float pi_frac = M_PI/12.0;
+  while(1)
+  {
+    frame_buffer.clear();
+
+    float x_val0 = 3*cos(pi_idx*pi_frac) + 40;
+    float y_val0 = 3*sin(pi_idx*pi_frac) + 3;
+    
+    float x_val1 = 3*cos(pi_idx*pi_frac + M_PI/2) + 40;
+    float y_val1 = 3*sin(pi_idx*pi_frac + M_PI/2) + 3;
+    
+    float x_val2 = 3*cos(pi_idx*pi_frac + M_PI) + 40;
+    float y_val2 = 3*sin(pi_idx*pi_frac + M_PI) + 3;
+    
+    float x_val3 = 3*cos(pi_idx*pi_frac + 3*M_PI/2) + 40;
+    float y_val3 = 3*sin(pi_idx*pi_frac + 3*M_PI/2) + 3;
+    
+    
+    pi_idx+=1;
+    if (pi_idx >= 24)
+      pi_idx = 0;
+    
+    //frame_buffer.drawLine(Vector3d(40, 3, 0), Vector3d((int)(x_val + 40), (int)(y_val + 3), 5), 0, 255, 0);
+    
+    frame_buffer.drawLine(Vector3d((int)x_val0, (int)y_val0, 5), Vector3d((int)x_val1, (int)y_val1, 5), 255, 0, 0);
+    frame_buffer.drawLine(Vector3d((int)x_val1, (int)y_val1, 5), Vector3d((int)x_val2, (int)y_val2, 5), 0, 255, 0);
+    frame_buffer.drawLine(Vector3d((int)x_val2, (int)y_val2, 5), Vector3d((int)x_val3, (int)y_val3, 5), 0, 0, 255);
+    frame_buffer.drawLine(Vector3d((int)x_val3, (int)y_val3, 5), Vector3d((int)x_val0, (int)y_val0, 5), 255, 255, 0);
+
+    frame_buffer.drawLine(Vector3d((int)x_val2, (int)y_val2, 4), Vector3d((int)x_val1, (int)y_val1, 4), 255, 255, 255);
+    frame_buffer.drawLine(Vector3d(40, 6, 3), Vector3d(37, 3, 3), 255, 0, 255);
+    
+    //frame_buffer.setColors((int)(x_val + 40), (int)(y_val + 3), 5, 255, 0, 0);
+    
+    //frame_buffer.drawLine(from, to, 0, 0, 255);
+    frame_buffer.update();
+    to.y++;
+    if (to.y >= WIDTH)
+    {
+      to.y = 0;
+      to.z++;
+    }
+    if (to.z >= HEIGHT)
+    {
+      to.z = 0;
+    }
+    delay(10);
+  }
+  ball_collision(&frame_buffer);
+  
+  struct pixel rgb;
+  rgb.r = 20;
+  rgb.g = 60;
+  rgb.b = 120;
+  char message[10] = "HELLO";
+  frame_buffer.clear();
+  for (int i=0; i<LENGTH; i++)
+  {
+    for (int j=0; j<WIDTH; j++)
+    {
+      if (j == 0 || j == 1 || j == (WIDTH -1))
+      {
+        frame_buffer.setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
+      }
+      else if (i == 0 || i == 1 || i == 5 || i == 6)
+      {
+        frame_buffer.setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
+      }
+      else
+      {
+        frame_buffer.setColors(i, j, 0, 128, 128, 128);
+      }
+    }
+  }
+  int height_idx = (offset_val/2 % 5) + 1;
+  writeString(message, offset_val, height_idx, rgb.r, rgb.g, rgb.b, &frame_buffer);
+  frame_buffer.update();
+  offset_val++;
+  if (offset_val > 40)
+  {
+    offset_val = 0;
+  }
+  delay(100);
+  return;
+  
 
   
   block_test();
@@ -253,42 +646,28 @@ void TC3_Handler() {
     if (!transfer_complete)
     {
       buf_idx++;
+
+      //If interrupt triggers before transfer can complete, still prepare next DMA array
+      //so next slice will display correctly
+      int next_idx = buf_idx % LENGTH;
+      convert_fb_to_dma(next_idx, buf_offset, frame_buffer.getReadBuffer(), pArray_next);
       return;
     }
   
     //driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
     start_dma_transaction();
     buf_idx++;
+    
+    int next_idx = buf_idx % LENGTH;
+    convert_fb_to_dma(next_idx, buf_offset, frame_buffer.getReadBuffer(), pArray_next);
   }
 }
 
 
-void hallTrigger()
+static inline void adjust_timing(TcCount16* TC, long timer_temp, long *timer_0)
 {
-  digitalWrite(LED_PIN, HIGH);
-
-  //Reset timer to zero
-  TcCount16* TC = (TcCount16*) TC3;
-  TC->COUNT.reg = 0;
-  long timer_temp = micros();
-  
-  if (!transfer_complete)
-  {
-    buf_idx = 1;
-    timer_0 = timer_temp;
-    return;
-  }
-  
-  //driveLEDS(buf_idx, (int*)buf_offset, &frame_buffer, &mySPI);
-  start_dma_transaction();
-  buf_idx = 1;
-  //while (TC->STATUS.bit.SYNCBUSY == 1);
-  //return;
-  
-  
-  
-  timer_delta = timer_temp - timer_0;
-  timer_0 = timer_temp;
+  timer_delta = timer_temp - *timer_0;
+  *timer_0 = timer_temp;
   if (timer_delta < MIN_PERIOD_US)
   {
     timer_delta = MIN_PERIOD_US;
@@ -298,25 +677,48 @@ void hallTrigger()
     timer_delta = MAX_PERIOD_US;
   }
   
-  
-  uint16_t period_us = timer_delta/LENGTH;
+  timer_delta -= (timer_delta >> 8);
+  uint16_t period_us = (timer_delta/LENGTH);
   uint16_t compareValue = (CPU_HZ_SCALE_DIV*period_us) - 1;
   TC->CC[0].reg = compareValue;
   while (TC->STATUS.bit.SYNCBUSY == 1);
-  
+}
+void hallTrigger()
+{
+  digitalWrite(LED_PIN, HIGH);
 
-  //return;
+  //Reset timer to zero
+  TcCount16* TC = (TcCount16*) TC3;
+  TC->COUNT.reg = 0;
+  long timer_temp = micros();
+  buf_idx = 1;
+  
+  if (!transfer_complete)
+  {
+    //Update timing even if, DMA transaction not finished
+    adjust_timing(TC, timer_temp, &timer_0);
+  
+    //If interrupt triggers before transfer can complete, still prepare next DMA array
+    //so next slice will display correctly
+    convert_fb_to_dma(buf_idx, buf_offset, frame_buffer.getReadBuffer(), pArray_next);
+    return;
+  }
+  
+  start_dma_transaction();
+  convert_fb_to_dma(buf_idx, buf_offset, frame_buffer.getReadBuffer(), pArray_next);
+
+  adjust_timing(TC, timer_temp, &timer_0);
 }
 
 void block_test()
 {
   SerialUSB.println("Entering blocktest");
   Vector3d vec0_s(0, 0, 0), vec0_e(9, 4, 1);
-  int r0, g0, b0;
+  uint8_t r0, g0, b0;
   doubleBuffer::randColor(&r0, &g0, &b0);
   
   Vector3d vec1_s(15, 0, 3), vec1_e(17, 6, 5);
-  int r1, g1, b1;
+  uint8_t r1, g1, b1;
   doubleBuffer::randColor(&r1, &g1, &b1);
   
   while(1)
