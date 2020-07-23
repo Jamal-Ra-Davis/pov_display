@@ -61,6 +61,88 @@ void Event::SerialParser()
 }
 
 
+void process_serial_commands(doubleBuffer* frame_buffer)
+{
+  static RingBuf<char, 32> serialBuffer;
+  while (Serial1.available())
+  {
+    char c = Serial1.read();
+    if (c == '\n')
+    {
+      //Parse when find newline character
+      serialBuffer.pop(c);
+      int bytes_remaining = serialBuffer.size();
+      switch(c)
+      {
+        case 'c':
+        {
+          frame_buffer->clear();
+          SerialUSB.println("c");
+          break;
+        }
+        case 'u':
+        {
+          frame_buffer->update();
+          SerialUSB.println("u");
+          break;
+        }
+        case 's':
+        {
+          char parse_buf[32] = {'\0'};
+          int parse_idx = 0;
+          for (parse_idx = 0; parse_idx < bytes_remaining; parse_idx++)
+          {
+            serialBuffer.pop(parse_buf[parse_idx]);
+          }
+          parse_buf[parse_idx] = '\0';
+
+          int x, y, z, r, g, b;
+          sscanf(parse_buf, "%d %d %d %d %d %d", &x, &y, &z, &r, &g, &b);
+          char command[32];
+          sprintf(command, "s %d %d %d %d %d %d\n", x, y, z, (uint8_t)r, (uint8_t)g, (uint8_t)b);
+          SerialUSB.print(command);
+          frame_buffer->setColors(x, y, z, r, g, b);
+          break;
+        }
+        case 'p':
+        case 'r':
+        {
+          char state = c;
+          serialBuffer.pop(c);
+          int idx = (int)c - 48;
+
+          SerialUSB.print(state);
+          SerialUSB.print(idx);
+          
+          if (state == 'p')
+          {
+            eventBuffer.push(Event(Event::ON_PRESS, idx));
+            SerialUSB.print("ON_PRESS: ");
+            SerialUSB.println(idx);
+          }
+          else if (state = 'r')
+          {
+            eventBuffer.push(Event(Event::ON_RELEASE, idx));
+            SerialUSB.print("ON_RELEASE: ");
+            SerialUSB.println(idx);
+          }
+          break;
+        }
+        default:
+        {
+          //Don't recognize first character of packet, clear and move on to next
+          serialBuffer.clear();
+        }
+      }
+    }
+    else
+    {
+      serialBuffer.push(c);
+    }
+  }
+}
+
+
 
 
 
