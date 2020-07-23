@@ -50,19 +50,19 @@ class doubleBuffer
     void reset();
     void forceSingleBuffer();
     bool isSingleBuffered() {return read_buffer == write_buffer;}
-    void setColorChannel(int l, int w, int h, int c_idx, int c_val);
-    void setColors(int l, int w, int h, int rVal, int gVal, int bVal);
+    void setColorChannel(int l, int w, int h, uint8_t c_idx, uint8_t c_val);
+    void setColors(int l, int w, int h, uint8_t rVal, uint8_t gVal, uint8_t bVal);
     void clear();
     void update();
     frameBuffer* getWriteBuffer() {return write_buffer;}
     frameBuffer* getReadBuffer() {return read_buffer;}
 
-    static void randColor(int *r, int *g, int *b);
+    static void randColor(uint8_t *r, uint8_t *g, uint8_t *b);
 
     //Drawing functions
-    void drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool fill = true);
-    void drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int r, int g, int b, bool fill=true);
-    void drawLine(Vector3d p0, Vector3d p1, int r, int g, int b);
+    void drawBlock(Vector3d v0, Vector3d v1, uint8_t r, uint8_t g, uint8_t b, bool fill = true);
+    void drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, uint8_t r, uint8_t g, uint8_t b, bool fill=true);
+    void drawLine(Vector3d p0, Vector3d p1, uint8_t r, uint8_t g, uint8_t b);
 };
 
 doubleBuffer::doubleBuffer()
@@ -87,7 +87,7 @@ void doubleBuffer::clear()
 {
   write_buffer->clear();
 }
-void doubleBuffer::setColorChannel(int l, int w, int h, int c_idx, int c_val)
+void doubleBuffer::setColorChannel(int l, int w, int h, uint8_t c_idx, uint8_t c_val)
 {
   if (l < 0 || w < 0 || h < 0 || c_idx < 0)
     return;
@@ -96,7 +96,7 @@ void doubleBuffer::setColorChannel(int l, int w, int h, int c_idx, int c_val)
 
   write_buffer->fbuf_[l][w][h][c_idx] = c_val;
 }
-void doubleBuffer::setColors(int l, int w, int h, int rVal, int gVal, int bVal)
+void doubleBuffer::setColors(int l, int w, int h, uint8_t rVal, uint8_t gVal, uint8_t bVal)
 {
   if (l < 0 || w < 0 || h < 0 || rVal < 0 || gVal < 0 || bVal < 0)
     return;
@@ -114,10 +114,10 @@ void doubleBuffer::update()
   write_buffer = temp;
 }
 
-void doubleBuffer::randColor(int *r, int *g, int *b)
+void doubleBuffer::randColor(uint8_t *r, uint8_t *g, uint8_t *b)
 {
-  int sel = rand() % 6;
-  int r_, g_, b_;
+  uint8_t sel = rand() % 6;
+  uint8_t r_, g_, b_;
   switch (sel)
   {
     case 0:
@@ -155,7 +155,7 @@ void doubleBuffer::randColor(int *r, int *g, int *b)
   *g = g_;
   *b = b_;
 }
-void doubleBuffer::drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool fill)
+void doubleBuffer::drawBlock(Vector3d v0, Vector3d v1, uint8_t r, uint8_t g, uint8_t b, bool fill)
 {
   if (v0.x > v1.x || v0.y > v1.y || v0.z > v1.z)
     return;
@@ -179,7 +179,7 @@ void doubleBuffer::drawBlock(Vector3d v0, Vector3d v1, int r, int g, int b, bool
     }
   }
 }
-void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int r, int g, int b, bool fill)
+void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, uint8_t r, uint8_t g, uint8_t b, bool fill)
 {
   if (x0 > x1 || y0 > y1 || z0 > z1)
     return;
@@ -206,7 +206,7 @@ void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, int
     }
   }
 }
-void doubleBuffer::drawLine(Vector3d p0, Vector3d p1, int r, int g, int b)
+void doubleBuffer::drawLine(Vector3d p0, Vector3d p1, uint8_t r, uint8_t g, uint8_t b)
 {
   enum AXIS {LX, LY, LZ};
   

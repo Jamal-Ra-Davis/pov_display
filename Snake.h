@@ -11,12 +11,13 @@
 class SnakeNode
 {
   public:
-    int x, y, z;
-    int r, g, b;
+    int8_t x, y, z;
+    uint8_t r, g, b;
 
     SnakeNode();
-    SnakeNode(int x_, int y_, int z_, int r_, int g_, int b_);
+    SnakeNode(int8_t x_, int8_t y_, int8_t z_, int r_, int g_, int b_);
     static SnakeNode randNode();
+    static void randNode(SnakeNode *out);
 };
 SnakeNode::SnakeNode()
 {
@@ -26,7 +27,7 @@ SnakeNode::SnakeNode()
   z = rand() % GAME_HEIGHT;
   doubleBuffer::randColor(&r, &g, &b);
 }
-SnakeNode::SnakeNode(int x_, int y_, int z_, int r_, int g_, int b_)
+SnakeNode::SnakeNode(int8_t x_, int8_t y_, int8_t z_, int r_, int g_, int b_)
 {
   x = x_;
   y = y_;
@@ -44,15 +45,25 @@ SnakeNode SnakeNode::randNode()
   doubleBuffer::randColor(&(out.r), &(out.g), &(out.b));
   return out;
 }
+void SnakeNode::randNode(SnakeNode *out)
+{
+  out->x = rand() % GAME_LENGTH;
+  out->y = rand() % GAME_WIDTH;
+  out->z = rand() % GAME_HEIGHT;
+  //SerialUSB.println(out->x);
+  //SerialUSB.println(random(256));
+  doubleBuffer::randColor(&(out->r), &(out->g), &(out->b));
+}
 
 class Snake
 {
   private:
-    const static int MAX_LEN = 60;
+    const static int MAX_LEN = 20;
     int len = 3;
     SnakeNode body[MAX_LEN];
     SnakeNode dot; 
     int dir;
+    bool auto_play;
     bool end_game;
 
 
@@ -74,15 +85,17 @@ class Snake
 Snake::Snake()
 {
   //Serial.println("Enter construct");
-  reset();
+  //reset();
   //Serial.println("Exit construct");
+  auto_play = false;
 }
 void Snake::reset()
 {
-  Serial.println("Enter Reset");
+  SerialUSB.println("Enter Reset");
   len = 3;
   dir = CW;
   end_game = false;
+  
   for (int i=0; i<len; i++)
   {
     body[i].x = (len-1)-i;
@@ -94,10 +107,15 @@ void Snake::reset()
   }
   while(1)
   {
-    SnakeNode node = SnakeNode::randNode();
+    SnakeNode node;
+    SnakeNode::randNode(&node);
     bool pass = true;
+    //SerialUSB.println(node.x);
+    //SerialUSB.println(node.y);
+    //SerialUSB.println(node.z);
     for (int i=0; i<len; i++)
     {
+      //Check if rand dot location is at same location as snake body
       if (body[i].x == node.x && body[i].y == node.y && body[i].z == node.z)
       {
         pass = false;
@@ -110,15 +128,13 @@ void Snake::reset()
       break;
     }
   }
-  dot.x = 2;
-  dot.y = 2;
-  dot.z = 2;
-  Serial.println("Exit Reset");
+
+  SerialUSB.println("Exit Reset");
 }
 
 void Snake::update()
 {
-  //Serial.println("Enter Update");
+  SerialUSB.println("Enter Update");
   SnakeNode next = body[0];
 
 
@@ -139,6 +155,8 @@ void Snake::update()
   }
   resetButtonStates();
   */
+  Event::SerialParser();
+  
   int dir_ = dir;
   while (!eventBuffer.isEmpty())
   {
@@ -152,17 +170,74 @@ void Snake::update()
     {
       case Event::ON_PRESS:
       {
+        SerialUSB.println("Button press");
         handleOnPress(e, dir_);
         break;
       }
       case Event::ON_RELEASE:
       {
+        SerialUSB.println("Button release");
         handleOnRelease(e, dir_);
         break;
       }
     }
   }
 
+  if (auto_play)
+  {
+    switch(dir)
+    {
+      case CW:
+      {
+        if (body[0].x == dot.x)
+        {
+          //Move up/down or in/out
+          if (body[0].y < dot.y)
+          {
+            dir = OUT;
+          }
+          else if (body[0].y > dot.y)
+          {
+            dir = IN;
+          }
+          else if (body[0].z > dot.z)
+          {
+            dir = UP;
+          }
+          else if(body[0].z > dot.z)
+          {
+            dir = DOWN;
+          }
+        }
+        break;
+      }
+      case CCW:
+      {
+        next.x--;
+        break;
+      }
+      case IN:
+      {
+        next.y--;
+        break;
+      }
+      case OUT:
+      {
+        next.y++;
+        break;
+      }
+      case UP:
+      {
+        next.z++;
+        break;
+      }
+      case DOWN:
+      {
+        next.z--;
+        break;
+      }
+    }
+  }
   
   switch(dir)
   {
@@ -257,7 +332,7 @@ void Snake::update()
 
   
 
-  //Serial.println("Exit update");
+  SerialUSB.println("Exit update");
 }
 
 void Snake::draw(doubleBuffer *frame_buffer)
@@ -305,8 +380,12 @@ int Snake::handleOnPress(Event e, int dir_)
       }
       break;
     }
-    case 2://fire(do nothing)
+    case 2://fire(toggle auto_play)
     {
+      if (!auto_play)
+        auto_play = true;
+      else
+        auto_play = false;
       break;
     }
     case 3://right
@@ -360,7 +439,7 @@ int Snake::handleOnPress(Event e, int dir_)
     }
   }
 
-  
+  /*
   if (e.button_idx == 0)
   {
     dir = dir_-1;
@@ -373,6 +452,7 @@ int Snake::handleOnPress(Event e, int dir_)
     if (dir >= NUM_DIR)
       dir = 0;
   }
+  */
   return 0;
 }
 int Snake::handleOnRelease(Event e, int dir_)

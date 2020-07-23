@@ -14,7 +14,7 @@ void textAnimation(doubleBuffer *frame_buffer)
   int text_sel = rand() % 4;
   int height = rand()%HEIGHT;
   int text_len = strlen(text[text_sel]);
-  int r, g, b;
+  uint8_t r, g, b;
   doubleBuffer::randColor(&r, &g, &b);
 
   for (int i=LENGTH + 5; i>(-2*text_len - 5); i--)
@@ -28,12 +28,12 @@ void textAnimation(doubleBuffer *frame_buffer)
 
 void pinWheelAnimation_0(doubleBuffer *frame_buffer)
 {
-  int lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
+  int8_t lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
   int N_CYCLE = 60;
   frame_buffer->reset();
 
   int sel = rand() % 6;
-    int r_, g_, b_;
+    uint8_t r_, g_, b_;
     doubleBuffer::randColor(&r_, &g_, &b_);
 
     frame_buffer->reset();
@@ -96,11 +96,11 @@ void pinWheelAnimation_0(doubleBuffer *frame_buffer)
 
 void vortexAnimation(doubleBuffer *frame_buffer)
 {
-  int lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
+  int8_t lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
   
   //frame_buffer->forceSingleBuffer();
   frame_buffer->reset();
-  int color_r, color_g, color_b;
+  uint8_t color_r, color_g, color_b;
   doubleBuffer::randColor(&color_r, &color_g, &color_b);
   
   
@@ -140,7 +140,7 @@ void multicolorFillAnimation(doubleBuffer *frame_buffer)
     {
       for (int i=LENGTH-1; i>=0; i--)
       {
-        int r_, g_, b_;
+        uint8_t r_, g_, b_;
         doubleBuffer::randColor(&r_, &g_, &b_);
 
         frame_buffer->setColors(i, j, k, r_, g_, b_);
@@ -181,7 +181,7 @@ void pulseAnimation(doubleBuffer *frame_buffer)
   frame_buffer->reset();
   frame_buffer->clear();
   
-  int r, g, b;
+  uint8_t r, g, b;
   doubleBuffer::randColor(&r, &g, &b);
   for (int i=0; i<LENGTH; i++)
   {
@@ -244,7 +244,7 @@ void alignment_test(doubleBuffer *frame_buffer)
 {
   while(1)
   {
-    int r, g, b;
+    uint8_t r, g, b;
     
     frame_buffer->clear();
     for (int j=0; j<WIDTH; j++)
@@ -266,9 +266,9 @@ void alignment_test(doubleBuffer *frame_buffer)
 void wobbly_words(doubleBuffer *frame_buffer)
 {
   int offset = 0;
-  int r__=128;
-  int g__=128;
-  int b__=128;
+  uint8_t r__=128;
+  uint8_t g__=128;
+  uint8_t b__=128;
   char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
   int word_idx = 0;
   while(1)
@@ -351,7 +351,7 @@ void draw_triange_wave(doubleBuffer *frame_buffer)
 {
   for (int i=0; i<LENGTH; i++)
   {
-    int r, g, b;
+    uint8_t r, g, b;
     doubleBuffer::randColor(&r, &g, &b);
     int i_ = i % 10;
     int h_idx;
@@ -378,15 +378,15 @@ void ball_collision(doubleBuffer *frame_buffer)
   Vector3d pos(rand()%LENGTH, rand()%WIDTH, rand()%HEIGHT);
   Vector3d collide_pos;
   Vector3d vel(1, -1, -1);
-  int r, g, b;
+  uint8_t r, g, b;
   doubleBuffer::randColor(&r, &g, &b);
   char rBuf[4];
   char gBuf[4];
   char bBuf[4];
 
-  int r_coll = 0;
-  int g_coll = 0;
-  int b_coll = 0;
+  uint8_t r_coll = 0;
+  uint8_t g_coll = 0;
+  uint8_t b_coll = 0;
   
   int walls[2][2] = {{20, 0}, {60, 1}};
   
@@ -517,7 +517,7 @@ void ball_collision(doubleBuffer *frame_buffer)
     {
       for (int j=0; j<8; j++)
       {
-        frame_buffer->setColors(55 - i, j, 5, sprite0[j][i][RED], sprite0[j][i][GREEN], sprite0[j][i][BLUE]);
+        //frame_buffer->setColors(55 - i, j, 5, sprite0[j][i][RED], sprite0[j][i][GREEN], sprite0[j][i][BLUE]);
       }
     }
     
@@ -526,7 +526,89 @@ void ball_collision(doubleBuffer *frame_buffer)
   }
 }
 
+void random_walk(doubleBuffer *frame_buffer)
+{
+  enum DIRECTION{CW, CCW, IN, OUT, UP, DOWN, NUM_DIR};
+  Vector3d pos;
+  uint8_t shift_cnt = 0;
+  
+  pos.x = rand() % LENGTH;
+  pos.y = rand() % WIDTH;
+  pos.z = rand() % HEIGHT;
 
+  frame_buffer->forceSingleBuffer();
+  frameBuffer* fb = frame_buffer->getWriteBuffer();
+  frame_buffer->clear();
+  while(1)
+  {
+    if (shift_cnt == 2)
+    {
+      for (int i=0; i<LENGTH; i++)
+      {
+        for (int j=0; j<WIDTH; j++)
+        {
+          for (int k=0; k<HEIGHT; k++)
+          {
+            fb->fbuf_[i][j][k][RED] >>= 1;
+            fb->fbuf_[i][j][k][GREEN] >>= 1;
+            fb->fbuf_[i][j][k][BLUE] >>= 1;
+          }
+        }
+      }
+    }
+    uint8_t dir = rand() % NUM_DIR;
+    switch(dir)
+    {
+      case CW:
+        pos.x++;
+        if (pos.x >= LENGTH)
+        {
+          pos.x = 0;
+        }
+        break;
+      case CCW:
+        pos.x--;
+        if (pos.x < 0)
+        {
+          pos.x = LENGTH - 1;
+        }
+        break;
+      case IN:
+        pos.y--;
+        if (pos.y < 0)
+        {
+          pos.y = WIDTH - 1;
+        }
+        break;
+      case OUT:
+        pos.y++;
+        if (pos.y >= WIDTH)
+        {
+          pos.y = 0;
+        }
+        break;
+      case UP:
+        pos.z++;
+        if (pos.z >= HEIGHT)
+        {
+          pos.z = 0;
+        }
+        break;
+      case DOWN:
+        pos.z--;
+        if (pos.z < 0)
+        {
+          pos.z = HEIGHT - 1;
+        }
+        break;
+    }
+    
+    doubleBuffer::randColor(&fb->fbuf_[pos.x][pos.y][pos.z][RED], &fb->fbuf_[pos.x][pos.y][pos.z][GREEN], &fb->fbuf_[pos.x][pos.y][pos.z][BLUE]);
+    shift_cnt++;
+    shift_cnt %= 3;
+    delay(33);
+  }
+}
 
 
 #endif
