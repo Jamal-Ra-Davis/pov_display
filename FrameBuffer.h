@@ -9,6 +9,8 @@ enum COLORS {RED, GREEN, BLUE, NUM_COLORS};
 #define WIDTH 8
 #define HEIGHT 6
 
+#define DB_SUPPORT true
+
 class frameBuffer
 {
   public:
@@ -42,8 +44,11 @@ class doubleBuffer
   private:
     frameBuffer *read_buffer;
     frameBuffer *write_buffer;
-    frameBuffer buf1, buf2;
+    frameBuffer buf1;
 
+    #if DB_SUPPORT
+    frameBuffer buf2;
+    #endif
 
   public:
     doubleBuffer();
@@ -67,20 +72,34 @@ class doubleBuffer
 
 doubleBuffer::doubleBuffer()
 {
+  #if DB_SUPPORT
   read_buffer = &buf1;
   write_buffer = &buf2;
+  #else
+  read_buffer = &buf1;
+  write_buffer = &buf1;
+  #endif
 }
 void doubleBuffer::reset()
 {
+  #if DB_SUPPORT
   read_buffer = &buf1;
   write_buffer = &buf2;
+  #else
+  read_buffer = &buf1;
+  write_buffer = &buf1;
+  #endif
+
   read_buffer->clear();
   write_buffer->clear();
 }
 void doubleBuffer::forceSingleBuffer()
 {
+  #if DB_SUPPORT
   read_buffer = &buf1;
   write_buffer = &buf1;
+  #endif
+  
   write_buffer->clear();
 }
 void doubleBuffer::clear()
