@@ -95,10 +95,24 @@ float pi_frac = M_PI/16.0;
 
 void loop() 
 {
+  MazeGame maze;
+  maze.init();
+  while (1)
+  {
+    
+    process_serial_commands(&frame_buffer);
+    frame_buffer.clear();
 
+    maze.update();
+    maze.draw(&frame_buffer);
+    
+    frame_buffer.update();
+    delay(33);
+  }
+  
   RingBuf<char, 32> serialBuffer;
   serialBuffer.clear();
-  while(1)
+  while(0)
   {
   while (Serial1.available())
   {
@@ -179,7 +193,7 @@ void loop()
   }
   }
   
-  while(1)
+  while(0)
   {
     while(Serial1.available())
     {
@@ -252,7 +266,7 @@ void loop()
   }
   
   //random_walk(&frame_buffer);
-  
+  /*
   SerialUSB.println("In Loop");
   SerialUSB.println(rand() % 100);
   Snake snake_game;
@@ -260,7 +274,7 @@ void loop()
   //Snake game
   snake_game.reset();
   
-  while(1)
+  while(0)
   {
     
     snake_game.update();
@@ -275,7 +289,7 @@ void loop()
   SerialUSB.println();
   delay(250);
   return;
-  
+  */
   
   //Draw cartesian coord
   Vector3d p0(-8, 8, 5);
@@ -1003,7 +1017,6 @@ void ship_game()
           }
         }
       }
-
      
       if (rand() % 10 == 0)
       {
@@ -1051,8 +1064,6 @@ void ship_game()
         }
       }
 
-
-
       float flame_int = rand() % 256 / 256.0;
       //Draw
       for (int i=0; i<10; i++)
@@ -1078,7 +1089,6 @@ void ship_game()
         
       }
 
-      
       for (int i=0; i<5; i++)
       {
         if (active_bullets[i] >= 0)
@@ -1086,7 +1096,6 @@ void ship_game()
           frame_buffer.setColors(bullets[i].x, bullets[i].y, bullets[i].z, 0, 255, 64);
         }
       }
-
 
       color_scale = sin(2*M_PI*color_idx);
       color_idx += 0.001;
@@ -1103,9 +1112,6 @@ void ship_game()
           }
         }
       }
-
-      
-
       frame_buffer.update();
       delay(33);
    }

@@ -67,9 +67,12 @@ void process_serial_commands(doubleBuffer* frame_buffer)
   while (Serial1.available())
   {
     char c = Serial1.read();
+    SerialUSB.print((int)c);
+    SerialUSB.print(" ");
     if (c == '\n')
     {
       //Parse when find newline character
+      SerialUSB.println();
       serialBuffer.pop(c);
       int bytes_remaining = serialBuffer.size();
       switch(c)
@@ -111,8 +114,9 @@ void process_serial_commands(doubleBuffer* frame_buffer)
           serialBuffer.pop(c);
           int idx = (int)c - 48;
 
+          SerialUSB.print("Button Action: ");
           SerialUSB.print(state);
-          SerialUSB.print(idx);
+          SerialUSB.println(idx);
           
           if (state == 'p')
           {
@@ -135,9 +139,10 @@ void process_serial_commands(doubleBuffer* frame_buffer)
         }
       }
     }
-    else
+    else if (c != 0)
     {
       serialBuffer.push(c);
+      //SerialUSB.print(c);
     }
   }
 }
