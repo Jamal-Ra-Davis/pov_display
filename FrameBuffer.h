@@ -2,6 +2,7 @@
 #define FRAME_BUFFER_LIB
 
 #include "Vector3d.h"
+#include<FastLED.h>
 
 enum COLORS {RED, GREEN, BLUE, NUM_COLORS};
 

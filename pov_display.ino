@@ -1,3 +1,4 @@
+#include<FastLED.h>
 #include <SPI.h>
 #include <math.h>
 #include "wiring_private.h" // pinPeripheral() function
@@ -28,6 +29,7 @@
 volatile uint8_t buf_idx = 0;
 const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LENGTH/6), 0*(LENGTH/6), 1*(LENGTH/6)};
 doubleBuffer frame_buffer;
+Shell shell;
 
 int hall;
 
@@ -76,7 +78,11 @@ void setup()
   startTimer(REFRESH_HZ*LENGTH);
   frame_buffer.reset();
   delay(3000);
+
+  //while(!SerialUSB);
+
   SerialUSB.println("Exiting setup");
+
 }
 
 
@@ -95,6 +101,41 @@ float pi_frac = M_PI/16.0;
 
 void loop() 
 {
+  int hue_offset = 0;
+  int width_offset = 60/(WIDTH-1);
+  //uint8_t height_transform[4] = {3, 4, 3, 1};
+  uint8_t height_transform[15] = {2, 4, 4, 5, 5, 5, 5, 4, 4, 3, 2, 1, 1, 1, 1};
+  uint8_t trans_size = 15;
+  while(1)
+  {
+    frame_buffer.clear();  
+    for (int i=0; i<LENGTH; i++)
+    {
+      int hue = (i*255)/LENGTH;
+      int k = 0;
+      if ((i >= 20) && i < (20 + trans_size))
+      {
+        int idx = i - 20;//i from 0 to trans_size - 1
+        k = height_transform[trans_size - 1 - idx];
+        //char ser_buf[128];
+        //sprintf(ser_buf, "i = %d, idx = %d, t_sz = %d, k = %d\n", i, idx, trans_size, k);
+        //SerialUSB.print(ser_buf);
+      }
+      
+      for (int j=0; j<WIDTH; j++)
+      {
+        CRGB color = CHSV(hue+hue_offset+((WIDTH-1-j)*width_offset), 255, 255);
+        frame_buffer.setColors(i, j, k, color.r, color.g, color.b);
+      }
+    }
+    hue_offset += 3;
+
+    
+    frame_buffer.update();
+    delay(33);
+  }
+
+  
   MazeGame maze;
   maze.init();
   while (1)

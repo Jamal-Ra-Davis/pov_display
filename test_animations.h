@@ -641,13 +641,29 @@ class MazeWall {
 };
 bool MazeWall::checkCollision(Vector3d in0, Vector3d in1)
 {
-  if (in0.x >= p0.x && in1.x <= p1.x &&
-      in0.y >= p0.y && in1.y <= p1.y &&
-      in0.z >= p0.z && in1.z <= p1.z)
+  /*
+  if ((in0.x >= p0.x) && (in1.x <= p1.x) &&
+      (in0.y >= p0.y) && (in1.y <= p1.y) &&
+      (in0.z >= p0.z) && (in1.z <= p1.z))
   {
     return true;
   }
   return false;
+  */
+
+  if (
+        (in0.x > p1.x) || //Left edge of player is further right than right edge of wall
+        (in1.x < p0.x) || //right edge of player is further left than left edge of wall
+        (in1.y < p0.y) || //outmost edge of player is further in than inmost edge of wall
+        (in0.y > p1.y) || //inmost edge of player is further out than outmost edge of wall
+        (in1.z < p0.z) || //Top of player is below bottom of wall 
+        (in0.z > p1.z)    //Bottom of player is abobe top of wall          
+     )
+  {
+    return false;  
+  }
+  return true;
+  
 }
 void MazeWall::update()
 {
@@ -703,6 +719,7 @@ class MazePlayer {
     void setMoveOut(bool b);// {out = b;}
     void setMoveUp(bool b);// {up = b;}
     void setMoveDown(bool b);// {down = b;}
+    void getEndPoints(Vector3d *p0, Vector3d *p1);
 };
 MazePlayer::MazePlayer()
 {
@@ -809,7 +826,7 @@ void MazePlayer::update()
   }
   
 
-  Vector3d p1 = Vector3d(next_pos.x + size - 1, next_pos.y + size - 1, next_pos.y + size - 1);
+  Vector3d p1 = Vector3d(next_pos.x + size - 1, next_pos.y + size - 1, next_pos.z + size - 1);
   //Check for collisions with maze walls
   if (walls != NULL)
   {
@@ -887,7 +904,9 @@ void MazePlayer::setMoveDown(bool b)
 }
 bool MazePlayer::intersects(Vector3d p0, Vector3d p1)
 {
+  
   Vector3d pos1 = Vector3d(pos.x+size-1, pos.y+size-1, pos.z+size-1);
+  /*
   if (p0.x >= pos.x && p1.x <= pos1.x &&
       p0.y >= pos.y && p1.y <= pos1.y &&
       p0.z >= pos.z && p1.z <= pos1.z)
@@ -895,34 +914,97 @@ bool MazePlayer::intersects(Vector3d p0, Vector3d p1)
     return true;
   }
   return false;
+  */
+  if (
+        (pos.x > p1.x) || //Left edge of player is further right than right edge of object
+        (pos1.x < p0.x) || //right edge of player is further left than left edge of object
+        (pos1.y < p0.y) || //outmost edge of player is further in than inmost edge of object
+        (pos.y > p1.y) || //inmost edge of player is further out than outmost edge of object
+        (pos1.z < p0.z) || //Top of player is below bottom of object
+        (pos.z > p1.z)    //Bottom of player is abobe top of object          
+     )
+  {
+    return false;  
+  }
+  return true;
+}
+void MazePlayer::getEndPoints(Vector3d *p0, Vector3d *p1)
+{
+  Vector3d pos1 = Vector3d(pos.x + size - 1, pos.y + size - 1, pos.z + size - 1);
+  *p0 = pos;
+  *p1 = pos1;
 }
 
-
-/*
+ 
 class MazeGoal {
   private:
     Vector3d pos;
     uint8_t brightness;
-    static const uint8_t SIZE=3;
+    static const uint8_t size=3;
 
   public:
-    
+    MazeGoal() {brightness = 255;}
+    MazeGoal(Vector3d pos_) {pos = pos_; brightness = 255;}
+    void init(Vector3d pos_) {pos = pos_; brightness = 255;}
+    void update();
+    void draw(doubleBuffer *frame_buffer, Vector3d offset);
+    void getEndPoints(Vector3d *p0, Vector3d *p1);
 };
-*/
+void MazeGoal::update()
+{
+  brightness -= 5;
+}
+void MazeGoal::draw(doubleBuffer *frame_buffer, Vector3d offset)
+{
+  uint8_t val = brightness;
+  if (val < 128)
+  {
+    val = 255 - val;
+  }
+
+  int z_idx = pos.z + offset.z;
+  for (int i=pos.x; i<pos.x+size; i++)
+  {
+    int x_idx = i + offset.x;
+    if (x_idx < 0)
+      x_idx += LENGTH;
+    x_idx %= LENGTH;
+    for (int j=pos.y; j<pos.y+size; j++)
+    {
+      int y_idx = j + offset.y;
+      frame_buffer->setColors(x_idx, y_idx, z_idx, 0, val, 0);
+    }
+  }
+}
+void MazeGoal::getEndPoints(Vector3d *p0, Vector3d *p1)
+{
+  Vector3d pos1 = Vector3d(pos.x + size - 1, pos.y + size - 1, pos.z + size - 1);
+  *p0 = pos;
+  *p1 = pos1;
+}
+
+
 class MazeGame {
   private:
     enum BUTTON_MAP{LEFT=1, FIRE, RIGHT, UP, DOWN, IN, OUT};
+    enum STATE{START_STATE, PLAY_STATE, END_STATE} game_state = START_STATE;
     MazeWall walls[8];
     MazePlayer player;
+    MazeGoal goal;
+    bool goal_reached;
     
     int handleInputs();
       
   public:
-    MazeGame() {};
+    MazeGame();
     void init();
     void update();
     void draw(doubleBuffer *frame_buffer);
 };
+MazeGame::MazeGame()
+{
+  goal_reached = false;
+}
 void MazeGame::init()
 {
   //Populate walls
@@ -931,18 +1013,29 @@ void MazeGame::init()
     walls[i/2].setMazeWall(Vector3d(maze_wall_data[i][0], maze_wall_data[i][1], maze_wall_data[i][2]), 
                            Vector3d(maze_wall_data[i+1][0], maze_wall_data[i+1][1], maze_wall_data[i+1][2])); 
   }
-
+  
   player.setPlayer(Vector3d(2, 0, 0), walls, 8);
+  goal.init(Vector3d(LENGTH - 6, 2, 0));
+  goal_reached = false;
 }
 void MazeGame::update()
 {
   handleInputs();
   
   player.update();
+  goal.update();
   for (int i=0; i<8; i++)
   {
     walls[i].update();
   }
+
+  Vector3d goal0, goal1;
+  goal.getEndPoints(&goal0, &goal1);
+  if (player.intersects(goal0, goal1))
+  {
+    goal_reached = true;
+  }
+  
 }
 void MazeGame::draw(doubleBuffer *frame_buffer)
 {
@@ -955,6 +1048,13 @@ void MazeGame::draw(doubleBuffer *frame_buffer)
   for (int i=0; i<8; i++)
   {
     walls[i].draw(frame_buffer, offset);
+  }
+  goal.draw(frame_buffer, offset);
+  
+  if (goal_reached)
+  {
+    for (int i=0; i<LENGTH; i++)
+      frame_buffer->setColors(i, 3, 2, 0, 255, 0);  
   }
 }
 int MazeGame::handleInputs()
