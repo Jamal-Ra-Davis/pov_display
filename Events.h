@@ -6,7 +6,7 @@
 class Event
 {
   public:
-    enum EVENT{ON_PRESS, ON_RELEASE};
+    enum EVENT{ON_PRESS, ON_RELEASE, TAP, NUM_BTN_EVENTS};
   
     EVENT type;
     uint8_t button_idx;

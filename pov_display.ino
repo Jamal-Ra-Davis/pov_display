@@ -11,6 +11,7 @@
 #include "Events.h"
 #include "Snake.h"
 #include "DMA_SPI.h"
+#include "Shell.h"
 
 #define LED_PIN 9
 #define HALL_PIN 6
@@ -79,10 +80,33 @@ void setup()
   frame_buffer.reset();
   delay(3000);
 
-  //while(!SerialUSB);
+  while(!SerialUSB);
 
   SerialUSB.println("Exiting setup");
 
+  shell_testing(&shell);
+  shell.reset();
+  while(1) 
+  {
+    //Capture Serial Data if Available
+    while(Serial1.available() > 0)
+    {
+      uint8_t val = Serial1.read();
+      shell.receive_data(val);
+    }
+
+    //Parse Messages if Available
+    for (int i=0; i < shell.get_ready_messages(); i++)
+    {
+      if (shell.parse_data() < 0)
+      {
+        SerialUSB.print("Error: Failed to parse #");
+        SerialUSB.println(i);
+        break;
+      }
+    }
+    delay(5);
+  }
 }
 
 
