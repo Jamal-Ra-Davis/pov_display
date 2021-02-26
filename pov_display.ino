@@ -67,7 +67,7 @@ void sercomSetup()
 }
 void setup()
 {
-  SerialUSB.begin(9600);
+  SerialUSB.begin(115200);
   Serial1.begin(115200);    //Hold off on until you know it's using a different SERCOM than SPI
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
@@ -84,6 +84,7 @@ void setup()
 
   SerialUSB.println("Exiting setup");
 
+  int shell_cnt = 0;
   shell_testing(&shell);
   shell.reset();
   while(1) 
@@ -104,6 +105,12 @@ void setup()
         SerialUSB.println(i);
         break;
       }
+    }
+    shell_cnt++;
+    if (shell_cnt == 200)
+    {
+      shell_cnt = 0;
+      SerialUSB.println("Hello-USB");
     }
     delay(5);
   }

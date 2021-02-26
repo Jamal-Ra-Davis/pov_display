@@ -19,6 +19,8 @@ address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
 WRITE_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
 
+TIMEOUT_PERIOD = 15.0
+
 messages_to_display = []
 messages_from_display = []
 client = None
@@ -37,9 +39,14 @@ def notification_handler(sender, data):
         child_conn_g.send(data)
 
 def getMessage(message_id, payload):
-    payload_size = len(payload)
-    header = struct.pack('i i', payload_size, message_id)
-    return (header + payload)
+    if (payload is None):
+        payload_size = 0
+        header = struct.pack('i i', payload_size, message_id)
+        return header
+    else:
+        payload_size = len(payload)
+        header = struct.pack('i i', payload_size, message_id)
+        return (header + payload)
 
 
 class POV_Shell(cmd.Cmd):
@@ -72,12 +79,24 @@ Type help or ? to list commands
     def do_get_display_size(self, arg):
         'Returns the dimensions of the display'
         try:
-            global parent_conn
+            handled = False
+            out_msg = getMessage(GET_DISPLAY_SIZE, None)
+            parent_conn.send(send_data)
+            if (parent_conn.poll(TIMEOUT_PERIOD)):
+                resp_data = parent_conn.recv()
+                handled = True
+                (l, w, h) = struct.unpack('i i i', resp_data) 
+                print("Response:", resp_data)
+                print("Length: %d, Width: %d, Height: %d"%(l, w, h))
+            else:
+                print("TIMEOUT waiting for response")
+
+            '''
             send_data = bytearray(b'Test Send\n')
             parent_conn.send(send_data)
             data = bytearray(b'\x60\x00\x00\x00\x08\x00\x00\x00\x06\x00\x00\x00')
             
-            if (parent_conn.poll(15)):
+            if (parent_conn.poll(TIMEOUT_PERIOD)):
                 resp_data = parent_conn.recv()
                 print("Response:", resp_data)
             else:
@@ -86,6 +105,7 @@ Type help or ? to list commands
 
             (l, w, h) = struct.unpack('i i i', data) 
             print("Length: %d, Width: %d, Height: %d"%(l, w, h))
+            '''
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -246,25 +266,17 @@ async def connect_test(address, loop, child_conn):
             establish_connection()
     '''
 
-def thread_function(name, child_conn):
+def ble_process(name, child_conn):
     global child_conn_g
     child_conn_g = child_conn
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(run_notification_and_name(address, loop, child_conn))
     loop.run_forever()
-    
-def thread_function2(name):
-    POV_Shell().cmdloop()
-
-def thread_function3(name):
-    while(True):
-        print("Thread", name)
-        time.sleep(1)
 
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
-    bt_process = multiprocessing.Process(target=thread_function, args=(1, child_conn))
+    bt_process = multiprocessing.Process(target=ble_process, args=(1, child_conn))
     bt_process.start()
     POV_Shell().cmdloop()
 

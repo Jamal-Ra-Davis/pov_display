@@ -32,9 +32,6 @@ extern long timer_delta;
 #define LOG_MSG                 5
 
 
-
-
-
 struct message_header {
   uint32_t payload_size;
   uint32_t msg_id;
@@ -44,11 +41,9 @@ struct message {
   uint8_t payload[0];
 };
 
-
 class Shell {
   private:
     RingBuf<uint8_t, 256> ring_buf;
-    uint8_t msg_buf[MAX_BUF_SZ];
     uint8_t end_buf[2];
     uint8_t msg_ready;
      
@@ -81,63 +76,57 @@ void Shell::reset()
 int Shell::receive_data(uint8_t val)
 {
   static int end_idx = 0;
-  //while(Serial1.available())
-  //{
-    //uint8_t val = Serial1.read();
-    if (end_idx < 2)
+  if (end_idx < 2)
+  {
+    end_buf[end_idx++] = val;
+  }
+  else
+  {
+    end_buf[0] = end_buf[1];
+    end_buf[1] = val;
+    if (end_buf[0] == MSG_FT0 && end_buf[1] == MSG_FT1)
     {
-      end_buf[end_idx++] = val;
+      end_idx = 0;
+      msg_ready++;
     }
-    else
-    {
-      end_buf[0] = end_buf[1];
-      end_buf[1] = val;
-      if (end_buf[0] == MSG_FT0 && end_buf[1] == MSG_FT1)
-      {
-        end_idx = 0;
-        msg_ready++;
-      }
-    }
-    ring_buf.push(val);
-  //}
+  }
+  ring_buf.push(val);
 }
 int Shell::parse_data()
 {
-  //while(msg_ready > 0)
-  //{ 
-    uint8_t end_id[2];
-    struct message* msg = (struct message*)msg_buf;
-    if (read_ringbuf((uint8_t*)msg, sizeof(struct message_header)) != 0)
-    {
-      //Failed to read, invalid size
-      msg_ready = 0;
-      ring_buf.clear();   
-      return -1;
-    }
+  uint8_t end_id[2];
+  static uint8_t msg_buf[128];
+  struct message* msg = (struct message*)msg_buf;
+  if (read_ringbuf((uint8_t*)msg, sizeof(struct message_header)) != 0)
+  {
+    //Failed to read, invalid size
+    msg_ready = 0;
+    ring_buf.clear();   
+    return -1;
+  }
 
-    if (read_ringbuf(msg->payload, msg->hdr.payload_size) != 0)
-    {
-      //Failed to read, invalid size
-      msg_ready = 0;
-      ring_buf.clear();   
-      return -1;
-    }
+  if (read_ringbuf(msg->payload, msg->hdr.payload_size) != 0)
+  {
+    //Failed to read, invalid size
+    msg_ready = 0;
+    ring_buf.clear();   
+    return -1;
+  }
 
-    if (read_ringbuf(end_id, 2) != 0)
-    {
-      //Failed to read, invalid size
-      msg_ready = 0;
-      ring_buf.clear();   
-      return -1;
-    }
+  if (read_ringbuf(end_id, 2) != 0)
+  {
+    //Failed to read, invalid size
+    msg_ready = 0;
+    ring_buf.clear();   
+    return -1;
+  }
 
-    execute_command(msg);
+  execute_command(msg);
 
-    if (msg_ready > 0)
-    {
-      msg_ready--;
-    }
-  //}
+  if (msg_ready > 0)
+  {
+    msg_ready--;
+  }
 }
 int Shell::read_ringbuf(uint8_t* dst, size_t N)
 {
