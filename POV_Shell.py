@@ -27,24 +27,14 @@ bt_process = None
 parent_conn = None 
 child_conn_g = None
 
-class dummy():
-    d = 0
-    child_conn = None
-
-dummy_class = dummy()
-
 def notification_handler(sender, data):
-    global child_conn
-    global dummy_class
-    #global messages_from_display
-    #messages_from_display.append(data)
+    global child_conn_g
     print("Message received:")
     print("{0}: {1}".format(sender, data))
-    print(child_conn_g)
-    if (dummy_class.child_conn is None):
+    if (child_conn_g is None):
         print("Error: invalid pipe connection")
     else:
-        dummy_class.child_conn.send(data)
+        child_conn_g.send(data)
 
 def getMessage(message_id, payload):
     payload_size = len(payload)
@@ -219,39 +209,6 @@ def parse(arg):
     return tuple(map(int, arg.split()))
 
 
-async def run_get_services(address, loop, parent_conn, child_conn):
-    cnt = 0
-    print("Establishing connection...")
-    global client
-    async with BleakClient(address, loop=loop) as client:
-        print("Connected!")
-        services = await client.get_services()
-
-        while (True):
-            print("parent_conn.poll(0):", child_conn.poll(0))
-            if (child_conn.poll(0)):
-                data = child_conn.recv() 
-                print(data)
-                await client.write_gatt_char(WRITE_UUID, data)
-            print("Sleeping...")
-            write_str = "Hello World: %d\n"%(cnt)
-            write_bytes = bytearray()
-            write_bytes.extend(write_str.encode())
-            #test_bytes = convert_to_bytearray("Testing\n")
-
-            await client.write_gatt_char(WRITE_UUID, write_bytes)
-            '''
-            await client.write_gatt_char(WRITE_UUID, set_colors(0, cnt%8, 0, 255, 0, 255))
-            for i in range(96):
-                for k in range(6):
-                    await client.write_gatt_char(WRITE_UUID, set_colors(i, 3, k, 0, 255, 255))
-            await client.write_gatt_char(WRITE_UUID, update())
-            print("s %d %d %d %d %d %d\n"%(0, cnt%8, 0, 255, 0, 255))
-            print("Packet Size:", len(clear()) + 96*6*len(set_colors(100, 100, 100, 100, 100, 100)) + len(update()))
-            '''
-            cnt += 1
-            await asyncio.sleep(2.5)
-
 async def run_notification_and_name(address, loop, child_conn):
     print("Establishing connection...")
     connect_attempts = 3
@@ -290,13 +247,8 @@ async def connect_test(address, loop, child_conn):
     '''
 
 def thread_function(name, child_conn):
-    #logging.info("Thread %s: starting", name)
-    #time.sleep(2)
-    #logging.info("Trhead %s: finishing", name)
-    global dummy_class
     global child_conn_g
     child_conn_g = child_conn
-    dummy_class.child_conn = child_conn
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(run_notification_and_name(address, loop, child_conn))
@@ -313,13 +265,7 @@ def thread_function3(name):
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
     bt_process = multiprocessing.Process(target=thread_function, args=(1, child_conn))
-    #y = multiprocessing.Process(target=thread_function2, args=(1,))
     bt_process.start()
-    #y.start()
-    #y.join()
-    #loop = asyncio.get_event_loop()
-    #loop.create_task(run_get_services(address, loop))
-    #loop.run_forever()
     POV_Shell().cmdloop()
 
 
