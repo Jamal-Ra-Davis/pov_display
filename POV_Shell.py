@@ -41,6 +41,8 @@ child_conn_g = None
 msg_footer = b'\xBE\xEF'
 
 log_msg = bytearray()
+msg_buf = bytearray()
+bytes_remaining = 0
 
 def getMessage(message_id, payload):
     if (payload is None):
@@ -61,6 +63,8 @@ def getMessagePayload(message):
 def retrieveMessage(conn):
     if (conn.poll(TIMEOUT_PERIOD)):
         resp_data = conn.recv()
+        if (len(resp_data) < 8):
+            return False
         (payload_size, msg_id) = getMessageHeader(resp_data)
         while (len(resp_data) < (payload_size + 10)):#header size = 8, footer = 2
             if (conn.poll(TIMEOUT_PERIOD)):
@@ -74,17 +78,29 @@ def retrieveMessage(conn):
 
 def notification_handler(sender, data):
     global child_conn_g
+    global msg_buf
+    global log_msg
+    global bytes_remaining
     #print("Message received:")
     #print("{0}: {1}".format(sender, data))
     if (child_conn_g is None):
         print("Error: invalid pipe connection")
     else:
-        #(payload_size, msg_id) = getMessageHeader(data)
-        #if (msg_id == LOG_MSG):
-        #print(getMessagePayload(data))
-        print(data)
-        #else:
-        child_conn_g.send(data)
+        msg_buf += data
+        while (len(msg_buf) >= 8):
+            (payload_size, msg_id) = getMessageHeader(msg_buf)
+            msg_size = payload_size + 10
+            if (len(msg_buf) >= msg_size):
+                #Complte message
+                message = msg_buf[:msg_size]
+                print("Full Message:", message)
+                if (msg_id == LOG_MSG):
+                    print(getMessagePayload(message))
+                else:
+                    child_conn_g.send(message)
+                msg_buf = msg_buf[msg_size:]
+            else:
+                break
 
 
 class POV_Shell(cmd.Cmd):
