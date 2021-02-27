@@ -8,11 +8,7 @@
 #include "Events.h"
 #include <string.h>
 
-#define MAX_BUF_SZ 64
-#define MAX_PAYLOAD (MAX_BUF_SZ-sizeof(struct message_header))
-
-extern doubleBuffer frame_buffer;
-extern long timer_delta;
+struct message_header;
 
 //Incoming Messages
 #define GET_DISPLAY_SIZE        0
@@ -30,6 +26,29 @@ extern long timer_delta;
 #define GET_BUFFER_TYPE_RESP    3
 #define GET_PERIOD_RESP         4
 #define LOG_MSG                 5
+
+
+#define MAX_BUF_SZ 64
+#define MAX_PAYLOAD (MAX_BUF_SZ-8)
+
+extern char log_line_buf[MAX_PAYLOAD];
+char log_line_buf[MAX_PAYLOAD];
+#define LOG_POV_SHELL(shell, ...)                                               \
+  ({                                                                            \ 
+    snprintf(log_line_buf, MAX_PAYLOAD, __VA_ARGS__);                           \
+    shell->send_data(LOG_MSG, (uint8_t*)log_line_buf, strlen(log_line_buf)+1);  \
+  })                                                  
+
+extern char serial_line_buf[MAX_BUF_SZ];
+char serial_line_buf[MAX_BUF_SZ];
+#define SERIAL_PRINTF(ser, ...)                             \
+  ({                                                        \ 
+    snprintf(serial_line_buf, MAX_BUF_SZ, __VA_ARGS__);     \
+    ser.print(serial_line_buf);                             \
+  })  
+
+extern doubleBuffer frame_buffer;
+extern long timer_delta;
 
 
 struct message_header {
