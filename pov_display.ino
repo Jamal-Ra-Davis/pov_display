@@ -93,6 +93,8 @@ void setup()
     while(Serial1.available() > 0)
     {
       uint8_t val = Serial1.read();
+      SerialUSB.print("Received: ");
+      SerialUSB.println(val, HEX);
       shell.receive_data(val);
     }
 
@@ -107,10 +109,15 @@ void setup()
       }
     }
     shell_cnt++;
-    if (shell_cnt == 200)
+    if (shell_cnt == 500)
     {
+      char out_buf[32] = {0};
+      SerialUSB.print("Hello-USB ");
+      SerialUSB.println(shell_cnt);
+
+      snprintf(out_buf, 32, "Hello POV %d\n", shell_cnt);
+      shell.send_data(LOG_MSG, (uint8_t*)out_buf, strlen(out_buf) + 1);
       shell_cnt = 0;
-      SerialUSB.println("Hello-USB");
     }
     delay(5);
   }

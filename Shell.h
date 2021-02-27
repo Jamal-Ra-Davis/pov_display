@@ -148,8 +148,8 @@ int Shell::read_ringbuf(uint8_t* dst, size_t N)
 
 
 struct button_event_data {
-  uint8_t type;
-  uint8_t btn_idx;
+  uint32_t type;
+  uint32_t btn_idx;
 };
 int Shell::execute_command(struct message *msg)
 {
@@ -167,9 +167,9 @@ int Shell::execute_command(struct message *msg)
     case GET_DISPLAY_SIZE:
     {
       struct display_size {
-        uint16_t length;
-        uint16_t width;
-        uint16_t height;
+        uint32_t length;
+        uint32_t width;
+        uint32_t height;
       };
       struct display_size disp_sz = {
         .length = LENGTH,
@@ -177,7 +177,7 @@ int Shell::execute_command(struct message *msg)
         .height = HEIGHT,
       };
 
-      ret = send_data(GET_DISPLAY_SIZE_RESP, (uint8_t*)&disp_sz, sizeof(disp_sz));
+      ret = send_data(GET_DISPLAY_SIZE_RESP, (uint8_t*)&disp_sz, sizeof(struct display_size));
       if (ret != 0)
       {
         SerialUSB.println("Error: Failed to send GET_DISPLAY_SIZE response");
@@ -335,6 +335,11 @@ int Shell::send_data(uint16_t msg_id, uint8_t* payload, size_t payload_size)
   msg->payload[payload_size+1] = MSG_FT1;
   
   Serial1.write(buf, sizeof(message_header) + payload_size + 2);
+  for (int i=0; i < (sizeof(message_header) + payload_size + 2); i++)
+  {
+    SerialUSB.print("Sending: ");
+    SerialUSB.println(buf[i], HEX);
+  }
   return 0;
 }
 
