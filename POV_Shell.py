@@ -40,9 +40,12 @@ child_conn_g = None
 
 msg_footer = b'\xBE\xEF'
 
-log_msg = bytearray()
 msg_buf = bytearray()
-bytes_remaining = 0
+mutex = threading.Lock()
+LOGGING_ENABLED = False
+LOG_EN = 'LOG_ENABLED'
+LOG_DIS = 'LOG_DISABLED'
+
 
 def getMessage(message_id, payload):
     if (payload is None):
@@ -79,28 +82,31 @@ def retrieveMessage(conn):
 def notification_handler(sender, data):
     global child_conn_g
     global msg_buf
-    global log_msg
-    global bytes_remaining
+    global mutex
+    global LOGGING_ENABLED
     #print("Message received:")
     #print("{0}: {1}".format(sender, data))
     if (child_conn_g is None):
         print("Error: invalid pipe connection")
     else:
+        mutex.acquire()
         msg_buf += data
         while (len(msg_buf) >= 8):
             (payload_size, msg_id) = getMessageHeader(msg_buf)
             msg_size = payload_size + 10
             if (len(msg_buf) >= msg_size):
-                #Complte message
+                #Complete message
                 message = msg_buf[:msg_size]
-                print("Full Message:", message)
+                #print("Full Message:", message)
                 if (msg_id == LOG_MSG):
-                    print(getMessagePayload(message))
+                    if (LOGGING_ENABLED == True):
+                        print(getMessagePayload(message).decode('utf-8'))
                 else:
                     child_conn_g.send(message)
                 msg_buf = msg_buf[msg_size:]
             else:
                 break
+        mutex.release()
 
 
 class POV_Shell(cmd.Cmd):
@@ -240,6 +246,20 @@ Type help or ? to list commands
         except BaseException:
             print("Error:", sys.exc_info())
 
+    def do_enable_logging(self, arg):
+        'Enables printing of LOG messages from display'
+        try:
+            parent_conn.send(LOG_EN)
+        except BaseException:
+            print("Error:", sys.exc_info())
+    
+    def do_disable_logging(self, arg):
+        'Disables printing of LOG messages from display'
+        try:
+            parent_conn.send(LOG_DIS)
+        except BaseException:
+            print("Error:", sys.exc_info())
+
     def do_test2(self, arg):
         'Test2 Command'
         print("Test 2")
@@ -286,7 +306,8 @@ def parse(arg):
 
 async def run_notification_and_name(address, loop, child_conn):
     print("Establishing connection...")
-    connect_attempts = 3
+    global LOGGING_ENABLED
+    connect_attempts = 10
     while (connect_attempts > 0):
         try:
             async with BleakClient(address) as client:
@@ -299,9 +320,18 @@ async def run_notification_and_name(address, loop, child_conn):
 
                 while(True):
                     if (child_conn.poll()):
-                        data = bytearray(child_conn.recv())
-                        #print("Sending:", data)
-                        await client.write_gatt_char(WRITE_UUID, data)
+                        data = child_conn.recv()
+                        if (data == LOG_EN):
+                            print("Enabling LOGGING:", data)
+                            LOGGING_ENABLED = True
+                        elif (data == LOG_DIS):
+                            print("Disabling LOGGING:", data)
+                            LOGGING_ENABLED = False
+                        else:
+                            print("Normal Message:", data)
+                            data = bytearray(data)
+                            #print("Sending:", data)
+                            await client.write_gatt_char(WRITE_UUID, data)
                     await asyncio.sleep(0.001)
 
                 await client.stop_notify(WRITE_UUID)
@@ -312,15 +342,6 @@ async def run_notification_and_name(address, loop, child_conn):
     if (connect_attempts == 0):
         print("Failed to connect...")
 
-
-async def connect_test(address, loop, child_conn):
-    connect_attempts = 10
-    '''
-    while (True):
-        if (conn_request):
-            conn_request = false
-            establish_connection()
-    '''
 
 def ble_process(name, child_conn):
     global child_conn_g
