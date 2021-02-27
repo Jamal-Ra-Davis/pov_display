@@ -112,11 +112,9 @@ void setup()
     if (shell_cnt == 500)
     {
       char out_buf[32] = {0};
-      SerialUSB.print("Hello-USB ");
-      SerialUSB.println(shell_cnt);
+      SERIAL_PRINTF(SerialUSB, "hello_usb %d\n", shell_cnt);
 
-      snprintf(out_buf, 32, "Hello POV %d\n", shell_cnt);
-      shell.send_data(LOG_MSG, (uint8_t*)out_buf, strlen(out_buf) + 1);
+      LOG_POV_SHELL((&shell), "%d HELLO %d\n", shell_cnt, shell_cnt);
       shell_cnt = 0;
     }
     delay(5);
