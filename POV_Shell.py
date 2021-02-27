@@ -7,6 +7,7 @@ import time
 import logging
 import multiprocessing
 
+#Message Commands
 GET_DISPLAY_SIZE =        0
 GET_BUFFER_TYPE =         1
 SET_BUFFER_TYPE =         2
@@ -14,6 +15,14 @@ CLEAR_DISPLAY =           3
 UPDATE_DISPLAY =          4
 GET_PERIOD =              5
 BUTTON_EVENT =            6
+
+#Message Responses
+ACK =                    0
+NACK =                   1
+GET_DISPLAY_SIZE_RESP =  2
+GET_BUFFER_TYPE_RESP =   3
+GET_PERIOD_RESP =        4
+LOG_MSG =                5
 
 address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
@@ -29,24 +38,53 @@ bt_process = None
 parent_conn = None 
 child_conn_g = None
 
-def notification_handler(sender, data):
-    global child_conn_g
-    print("Message received:")
-    print("{0}: {1}".format(sender, data))
-    if (child_conn_g is None):
-        print("Error: invalid pipe connection")
-    else:
-        child_conn_g.send(data)
+msg_footer = b'\xBE\xEF'
+
+log_msg = bytearray()
 
 def getMessage(message_id, payload):
     if (payload is None):
         payload_size = 0
         header = struct.pack('i i', payload_size, message_id)
-        return header
+        return (header + msg_footer)
     else:
         payload_size = len(payload)
         header = struct.pack('i i', payload_size, message_id)
-        return (header + payload)
+        return (header + payload + msg_footer)
+
+def getMessageHeader(message):
+    return struct.unpack('i i', message[0:8]) 
+
+def getMessagePayload(message):
+    return message[8:-2]
+
+def retrieveMessage(conn):
+    if (conn.poll(TIMEOUT_PERIOD)):
+        resp_data = conn.recv()
+        (payload_size, msg_id) = getMessageHeader(resp_data)
+        while (len(resp_data) < (payload_size + 10)):#header size = 8, footer = 2
+            if (conn.poll(TIMEOUT_PERIOD)):
+                temp = conn.recv()
+                resp_data += temp
+            else:
+                return False
+        return [resp_data, (payload_size, msg_id)]
+    else:
+        return False
+
+def notification_handler(sender, data):
+    global child_conn_g
+    #print("Message received:")
+    #print("{0}: {1}".format(sender, data))
+    if (child_conn_g is None):
+        print("Error: invalid pipe connection")
+    else:
+        #(payload_size, msg_id) = getMessageHeader(data)
+        #if (msg_id == LOG_MSG):
+        #print(getMessagePayload(data))
+        print(data)
+        #else:
+        child_conn_g.send(data)
 
 
 class POV_Shell(cmd.Cmd):
@@ -79,40 +117,41 @@ Type help or ? to list commands
     def do_get_display_size(self, arg):
         'Returns the dimensions of the display'
         try:
-            handled = False
             out_msg = getMessage(GET_DISPLAY_SIZE, None)
-            parent_conn.send(send_data)
-            if (parent_conn.poll(TIMEOUT_PERIOD)):
-                resp_data = parent_conn.recv()
-                handled = True
-                (l, w, h) = struct.unpack('i i i', resp_data) 
-                print("Response:", resp_data)
-                print("Length: %d, Width: %d, Height: %d"%(l, w, h))
-            else:
-                print("TIMEOUT waiting for response")
-
-            '''
-            send_data = bytearray(b'Test Send\n')
-            parent_conn.send(send_data)
-            data = bytearray(b'\x60\x00\x00\x00\x08\x00\x00\x00\x06\x00\x00\x00')
-            
-            if (parent_conn.poll(TIMEOUT_PERIOD)):
-                resp_data = parent_conn.recv()
-                print("Response:", resp_data)
-            else:
-                print("TIMEOUT waiting for response")
-            
-
-            (l, w, h) = struct.unpack('i i i', data) 
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+            payload = getMessagePayload(resp)
+            print(payload)
+            handled = True
+            (l, w, h) = struct.unpack('i i i', payload) 
             print("Length: %d, Width: %d, Height: %d"%(l, w, h))
-            '''
         except BaseException:
             print("Error:", sys.exc_info())
 
     def do_get_buffer_type(self, arg):
         'Returns whether single or double buffering is used'
         try:
-            print("Double Buffered")
+            out_msg = getMessage(GET_BUFFER_TYPE, None)
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+            payload = getMessagePayload(resp)
+            print(payload)
+            handled = True
+            buffer_type = struct.unpack('c', payload)
+            buffer_type = int(buffer_type[0][0]) 
+            print("buffer type:", buffer_type)
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -244,10 +283,11 @@ async def run_notification_and_name(address, loop, child_conn):
 
                 while(True):
                     if (child_conn.poll()):
-                        data = child_conn.recv()
+                        data = bytearray(child_conn.recv())
+                        #print("Sending:", data)
                         await client.write_gatt_char(WRITE_UUID, data)
-                    await asyncio.sleep(0.01)
-                #await asyncio.sleep(30.0)
+                    await asyncio.sleep(0.001)
+
                 await client.stop_notify(WRITE_UUID)
         except exc.BleakError:
             print("Retrying connection...")
@@ -258,7 +298,7 @@ async def run_notification_and_name(address, loop, child_conn):
 
 
 async def connect_test(address, loop, child_conn):
-    connect_attempts = 3
+    connect_attempts = 10
     '''
     while (True):
         if (conn_request):
