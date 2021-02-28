@@ -55,6 +55,7 @@ class doubleBuffer
     doubleBuffer();
     void reset();
     void forceSingleBuffer();
+    void forceDoubleBuffer();
     bool isSingleBuffered() {return read_buffer == write_buffer;}
     void setColorChannel(int l, int w, int h, uint8_t c_idx, uint8_t c_val);
     void setColors(int l, int w, int h, uint8_t rVal, uint8_t gVal, uint8_t bVal);
@@ -102,6 +103,16 @@ void doubleBuffer::forceSingleBuffer()
   #endif
   
   write_buffer->clear();
+}
+void doubleBuffer::forceDoubleBuffer()
+{
+  #if DB_SUPPORT
+  read_buffer = &buf1;
+  write_buffer = &buf2;
+  #else
+  read_buffer = &buf1;
+  write_buffer = &buf1;
+  #endif
 }
 void doubleBuffer::clear()
 {

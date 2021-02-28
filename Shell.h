@@ -18,6 +18,8 @@ struct message_header;
 #define UPDATE_DISPLAY          4
 #define GET_PERIOD              5
 #define BUTTON_EVENT            6
+#define GET_REGISTER            7
+#define SET_REGISTER            8
 
 //Outgoing Messages
 #define ACK                     0
@@ -26,6 +28,7 @@ struct message_header;
 #define GET_BUFFER_TYPE_RESP    3
 #define GET_PERIOD_RESP         4
 #define LOG_MSG                 5
+#define GET_REGISTER_RESP       6
 
 
 #define MAX_BUF_SZ 64
@@ -233,7 +236,19 @@ int Shell::execute_command(struct message *msg)
         break;
       }
       bool *single_buffer = (bool*)msg->payload;
-      //TODO: Need to make function for switching between single and double buffer. (Can only force single buffer or reset buffer)
+      if (*single_buffer == true)
+        frame_buffer.forceSingleBuffer();
+      else
+        frame_buffer.forceDoubleBuffer();
+      
+      ret = send_data(ACK, NULL, 0);
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK SET_BUFFER_TYPE");
+        break;
+      }
+      SERIAL_PRINTF(SerialUSB, "Buffer type set: %d", (int)(*single_buffer));
+      msg_handled = true;
       break;
     }
 
@@ -258,7 +273,7 @@ int Shell::execute_command(struct message *msg)
         break;
       }
       char buf[MAX_BUF_SZ];
-      snprintf(buf, MAX_BUF_SZ, "Frane buffer cleared, update: %d", (int)update);
+      snprintf(buf, MAX_BUF_SZ, "Frame buffer cleared, update: %d", (int)update);
       SerialUSB.println(buf);
       msg_handled = true;
       break;
