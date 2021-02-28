@@ -187,9 +187,23 @@ Type help or ? to list commands
                 type = 0
             else:
                 raise Exception("Invalid buffer type: {}".format(arg[0]))
-            payload = struct.pack('i', type)
-            message = getMessage(SET_BUFFER_TYPE, payload)
-            print(message)
+            payload = struct.pack('c', bytes([type]))
+            out_msg = getMessage(SET_BUFFER_TYPE, payload)
+            print(out_msg)
+
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            if (msg_id == ACK):
+                print("Buffer type set successfully")
+            elif (msg_id == NACK):
+                print("Error: command NACKed")
+            else:
+                print("Error: Unexpected command response")
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -322,15 +336,13 @@ async def run_notification_and_name(address, loop, child_conn):
                     if (child_conn.poll()):
                         data = child_conn.recv()
                         if (data == LOG_EN):
-                            print("Enabling LOGGING:", data)
+                            print("Enabling LOGGING...")
                             LOGGING_ENABLED = True
                         elif (data == LOG_DIS):
-                            print("Disabling LOGGING:", data)
+                            print("Disabling LOGGING...")
                             LOGGING_ENABLED = False
                         else:
-                            print("Normal Message:", data)
                             data = bytearray(data)
-                            #print("Sending:", data)
                             await client.write_gatt_char(WRITE_UUID, data)
                     await asyncio.sleep(0.001)
 
