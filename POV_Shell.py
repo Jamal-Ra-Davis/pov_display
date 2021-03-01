@@ -33,7 +33,7 @@ address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
 WRITE_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
 
-TIMEOUT_PERIOD = 15.0
+TIMEOUT_PERIOD = 5.0
 
 messages_to_display = []
 messages_from_display = []
@@ -157,7 +157,7 @@ Type help or ? to list commands
             if (msg_id == NACK):
                 print("Error: command NACKed")
                 return
-            elif (msg != GET_DISPLAY_SIZE_RESP):
+            elif (msg_id != GET_DISPLAY_SIZE_RESP):
                 print("Error: Unexpected command response")
                 return
 
@@ -185,7 +185,7 @@ Type help or ? to list commands
             if (msg_id == NACK):
                 print("Error: command NACKed")
                 return
-            elif (msg != GET_BUFFER_TYPE_RESP):
+            elif (msg_id != GET_BUFFER_TYPE_RESP):
                 print("Error: Unexpected command response")
                 return
 
@@ -273,7 +273,7 @@ Type help or ? to list commands
             resp = message[0]
             payload_size, msg_id = message[1]
             if (msg_id == ACK):
-                print("Display successfully cleared")
+                print("Display successfully updated")
             elif (msg_id == NACK):
                 print("Error: command NACKed")
             else:
@@ -300,7 +300,7 @@ Type help or ? to list commands
             if (msg_id == NACK):
                 print("Error: command NACKed")
                 return
-            elif (msg != GET_PERIOD_RESP):
+            elif (msg_id != GET_PERIOD_RESP):
                 print("Error: Unexpected command response")
                 return
 
