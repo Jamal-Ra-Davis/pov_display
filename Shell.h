@@ -275,7 +275,7 @@ int Shell::execute_command(struct message *msg)
         break;
       }
       char buf[MAX_BUF_SZ];
-      snprintf(buf, MAX_BUF_SZ, "Frame buffer cleared, update: %d", (int)update);
+      snprintf(buf, MAX_BUF_SZ, "Frame buffer cleared, update: %d", (int)(*update));
       SerialUSB.println(buf);
       msg_handled = true;
       break;
