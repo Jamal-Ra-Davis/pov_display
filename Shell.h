@@ -20,6 +20,8 @@ struct message_header;
 #define BUTTON_EVENT            6
 #define GET_REGISTER            7
 #define SET_REGISTER            8
+#define SET_MARQUEE_TEXT        9
+#define USE_MARQEE              10
 
 //Outgoing Messages
 #define ACK                     0

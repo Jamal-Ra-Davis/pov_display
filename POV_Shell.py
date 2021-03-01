@@ -15,6 +15,10 @@ CLEAR_DISPLAY =           3
 UPDATE_DISPLAY =          4
 GET_PERIOD =              5
 BUTTON_EVENT =            6
+GET_REGISTER =            7
+SET_REGISTER =            8
+SET_MARQUEE_TEXT =        9
+USE_MARQEE =              10
 
 #Message Responses
 ACK =                    0
@@ -23,6 +27,7 @@ GET_DISPLAY_SIZE_RESP =  2
 GET_BUFFER_TYPE_RESP =   3
 GET_PERIOD_RESP =        4
 LOG_MSG =                5
+GET_REGISTER_RESP =      6
 
 address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
@@ -148,6 +153,14 @@ Type help or ? to list commands
             resp = message[0]
             payload_size, msg_id = message[1]
             print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+            if (msg_id == NACK):
+                print("Error: command NACKed")
+                return
+            elif (msg != GET_DISPLAY_SIZE_RESP):
+                print("Error: Unexpected command response")
+                return
+
             payload = getMessagePayload(resp)
             print(payload)
             handled = True
@@ -168,6 +181,14 @@ Type help or ? to list commands
             resp = message[0]
             payload_size, msg_id = message[1]
             print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+            if (msg_id == NACK):
+                print("Error: command NACKed")
+                return
+            elif (msg != GET_BUFFER_TYPE_RESP):
+                print("Error: Unexpected command response")
+                return
+
             payload = getMessagePayload(resp)
             print(payload)
             handled = True
@@ -217,15 +238,46 @@ Type help or ? to list commands
                 update = 0
             else:
                 raise Exception("Invalid boolean: {}".format(arg[0]))
-            payload = struct.pack('i', update)
-            message = getMessage(UPDATE_DISPLAY, payload)
-            print(message)
+
+            payload = struct.pack('c', bytes([update]))
+            out_msg = getMessage(CLEAR_DISPLAY, payload)
+            print(out_msg)
+
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            if (msg_id == ACK):
+                print("Display successfully cleared")
+            elif (msg_id == NACK):
+                print("Error: command NACKed")
+            else:
+                print("Error: Unexpected command response")
         except BaseException:
             print("Error:", sys.exc_info())
     
     def do_update_display(self, arg):
         'Update display (switch front and rear buffers)'
         try:
+            out_msg = getMessage(UPDATE_DISPLAY, None)
+            print(out_msg)
+
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            if (msg_id == ACK):
+                print("Display successfully cleared")
+            elif (msg_id == NACK):
+                print("Error: command NACKed")
+            else:
+                print("Error: Unexpected command response")
             pass
         except BaseException:
             print("Error:", sys.exc_info())
@@ -233,7 +285,30 @@ Type help or ? to list commands
     def do_get_period(self, arg):
         'Returns last recorded rotation period'
         try:
-            print("20000 us")
+            out_msg = getMessage(GET_PERIOD, None)
+            print(out_msg)
+
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+            if (msg_id == NACK):
+                print("Error: command NACKed")
+                return
+            elif (msg != GET_PERIOD_RESP):
+                print("Error: Unexpected command response")
+                return
+
+            payload = getMessagePayload(resp)
+            print(payload)
+            handled = True
+            (period) = struct.unpack('i', payload) 
+            print("Period: %u us"%(period))
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -255,8 +330,24 @@ Type help or ? to list commands
                 raise Exception("Invalid button event: {}".format(arg[1]))
             
             payload = struct.pack('i i', event, button_idx)
-            message = getMessage(BUTTON_EVENT, payload)
-            print(message)
+            out_msg = getMessage(BUTTON_EVENT, payload)
+            print(out_msg)
+
+            parent_conn.send(out_msg)
+            message = retrieveMessage(parent_conn)
+            if (message is False):
+                print("Error: Failed to get message")
+                return
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+            if (msg_id == ACK):
+                print("Successfully sent button event")
+            elif (msg_id == NACK):
+                print("Error: command NACKed")
+            else:
+                print("Error: Unexpected command response")
         except BaseException:
             print("Error:", sys.exc_info())
 

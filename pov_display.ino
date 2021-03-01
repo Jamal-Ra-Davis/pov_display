@@ -112,7 +112,7 @@ void setup()
     if (shell_cnt == 500)
     {
       char out_buf[32] = {0};
-      SERIAL_PRINTF(SerialUSB, "hello_usb %d\n", shell_cnt);
+      //SERIAL_PRINTF(SerialUSB, "hello_usb %d\n", shell_cnt);
 
       LOG_POV_SHELL((&shell), "%d HELLO %d\n", shell_cnt, shell_cnt);
       shell_cnt = 0;
