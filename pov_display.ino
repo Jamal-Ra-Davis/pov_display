@@ -27,12 +27,32 @@
 
 #define REFRESH_HZ 30
 
+#define TICK_DELAY 5
+
 volatile uint8_t buf_idx = 0;
 const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LENGTH/6), 0*(LENGTH/6), 1*(LENGTH/6)};
 doubleBuffer frame_buffer;
 Shell shell;
 
 int hall;
+
+typedef enum {
+              POV_SCRATCH_LOOP,
+              POV_TEST, 
+              NUM_POV_STATES
+} pov_state_t;
+pov_state_t exec_state = POV_TEST;
+bool pov_state_change = true;
+void change_state(pov_state_t state)
+{
+  if (exec_state != state)
+  {
+    exec_state = state;
+    pov_state_change = true;
+  }
+}
+void scratch_loop();
+void test_exec();
 
 SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
 
@@ -44,6 +64,53 @@ void hallTrigger();
 
 long timer_0, timer_delta;
 
+void processSerialCommands()
+{
+  //Capture Serial Data if Available
+  while(Serial1.available() > 0)
+  {
+    uint8_t val = Serial1.read();
+    SerialUSB.print("Received: ");
+    SerialUSB.println(val, HEX);
+    shell.receive_data(val);
+  }
+
+  //Parse Messages if Available
+  for (int i=0; i < shell.get_ready_messages(); i++)
+  {
+    if (shell.parse_data() < 0)
+    {
+      SerialUSB.print("Error: Failed to parse #");
+      SerialUSB.println(i);
+      break;
+    }
+  }
+}
+void main_exec()
+{
+  switch(exec_state)
+  {
+    case POV_SCRATCH_LOOP:
+      scratch_loop();
+      break;
+    case POV_TEST:
+      test_exec();
+      break;
+    default:
+      break;
+  }
+}
+void superLoop()
+{
+  long tick_start = millis();
+  processSerialCommands();
+  frame_buffer.clear();
+  
+  main_exec();//exec function responsible for managing event buffer
+
+  frame_buffer.update();
+  while((millis() - tick_start) < TICK_DELAY);
+}
 
 void hallEffectSetup()
 {
@@ -80,14 +147,14 @@ void setup()
   frame_buffer.reset();
   delay(3000);
 
-  while(!SerialUSB);
+  //while(!SerialUSB);
 
   SerialUSB.println("Exiting setup");
 
   int shell_cnt = 0;
-  shell_testing(&shell);
+  //shell_testing(&shell);
   shell.reset();
-  while(1) 
+  while(0) 
   {
     //Capture Serial Data if Available
     while(Serial1.available() > 0)
@@ -114,7 +181,7 @@ void setup()
       char out_buf[32] = {0};
       //SERIAL_PRINTF(SerialUSB, "hello_usb %d\n", shell_cnt);
 
-      LOG_POV_SHELL((&shell), "%d HELLO %d\n", shell_cnt, shell_cnt);
+      //LOG_POV_SHELL((&shell), "%d HELLO %d\n", shell_cnt, shell_cnt);
       shell_cnt = 0;
     }
     delay(5);
@@ -134,8 +201,11 @@ void endless_runner();
 void ship_game();
 float pi_frac = M_PI/16.0;
 
-
 void loop() 
+{
+  superLoop();
+}
+void scratch_loop() 
 {
   int hue_offset = 0;
   int width_offset = 60/(WIDTH-1);
@@ -1195,3 +1265,40 @@ void ship_game()
    
 }
 
+void test_exec()
+{
+  static const uint8_t delay_cnt = 7;
+  static uint8_t cnt = 0;
+  static const char* test_message = "AR PRODUCT FW";
+
+  static int message_len = strlen(test_message);
+  static int start_offset = -1*message_len*8;
+  static int offset = start_offset;
+
+  static int start_offset2 = LENGTH;
+  static int offset2 = start_offset;
+  
+  //Draw
+  writeString(test_message, offset, 1, 50, 0, 255, &frame_buffer);
+  writeString(test_message, offset2, 4, 0, 255, 100, &frame_buffer);
+
+  //Update logic
+  if (cnt++ % delay_cnt == 0)
+  {
+    offset++;
+    if (offset >= LENGTH)
+    {
+      offset = start_offset;
+    } 
+
+    SERIAL_PRINTF(SerialUSB, "Offset2 = %d\n", offset2);
+    offset2--;
+    SERIAL_PRINTF(SerialUSB, "Offset2(post) = %d\n", offset2);
+    if (offset2 <= -1*message_len*8)
+    {
+      SERIAL_PRINTF(SerialUSB, "Offset2 = %d, -1*message_len*8 = %d\n", offset2, -1*message_len*8);
+      offset2 = start_offset2;
+    }
+  }
+  
+}

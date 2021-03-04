@@ -22,6 +22,8 @@ struct message_header;
 #define SET_REGISTER            8
 #define SET_MARQUEE_TEXT        9
 #define USE_MARQEE              10
+#define SET_RTC_TIME            11
+#define GET_RTC_TIME            12
 
 //Outgoing Messages
 #define ACK                     0
@@ -31,6 +33,7 @@ struct message_header;
 #define GET_PERIOD_RESP         4
 #define LOG_MSG                 5
 #define GET_REGISTER_RESP       6
+#define GET_RTC_TIME_RESP       7
 
 
 #define MAX_BUF_SZ 64

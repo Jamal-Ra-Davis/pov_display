@@ -72,7 +72,7 @@ int resolveChar(char c)
 }
 
 
-void writeString(char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t b, doubleBuffer* frame_buffer)// int bound_h=LENGTH, int bound_l=0
+void writeString(const char *str, int offset, int layer, uint8_t r, uint8_t g, uint8_t b, doubleBuffer* frame_buffer)// int bound_h=LENGTH, int bound_l=0
 {
   if (layer < 0 || layer >= HEIGHT)
     return;
