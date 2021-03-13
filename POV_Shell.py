@@ -141,7 +141,6 @@ Type help or ? to list commands
     prompt = '>>'
     file = None
 
-
     def do_test(self, arg):
         'Test Command'
         print("Test 1")
@@ -151,24 +150,21 @@ Type help or ? to list commands
         try:
             out_msg = getMessage(GET_DISPLAY_SIZE, None)
             parent_conn.send(out_msg)
+            response_id = GET_DISPLAY_SIZE_RESP
+
             #message = retrieveMessage(parent_conn)
-            resp = msg_queue_dict[GET_DISPLAY_SIZE_RESP].get(timeout=TIMEOUT_PERIOD)
+            resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
             (payload_size, msg_id) = getMessageHeader(resp)
 
-            #if (message is False):
-            #    print("Error: Failed to get message")
-            #    return
-            #resp = message[0]
-            #payload_size, msg_id = message[1]
             print("Received message: %d of size %d bytes"%(msg_id, payload_size))
 
             if (msg_id == NACK):
                 print("Error: command NACKed")
-                msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
+                msg_queue_dict[response_id].task_done()
                 return
-            elif (msg_id != GET_DISPLAY_SIZE_RESP):
+            elif (msg_id != response_id):
                 print("Error: Unexpected command response")
-                msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
+                msg_queue_dict[response_id].task_done()
                 return
 
             payload = getMessagePayload(resp)
@@ -176,7 +172,7 @@ Type help or ? to list commands
             handled = True
             (l, w, h) = struct.unpack('i i i', payload) 
             print("Length: %d, Width: %d, Height: %d"%(l, w, h))
-            msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
+            msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
@@ -187,19 +183,27 @@ Type help or ? to list commands
         try:
             out_msg = getMessage(GET_BUFFER_TYPE, None)
             parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
+            response_id = GET_BUFFER_TYPE_RESP
+
+            #message = retrieveMessage(parent_conn)
+            #if (message is False):
+            #    print("Error: Failed to get message")
+            #    return
+            #resp = message[0]
+            #payload_size, msg_id = message[1]
+
+            resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
+            (payload_size, msg_id) = getMessageHeader(resp)
+
             print("Received message: %d of size %d bytes"%(msg_id, payload_size))
 
             if (msg_id == NACK):
                 print("Error: command NACKed")
+                msg_queue_dict[response_id].task_done()
                 return
-            elif (msg_id != GET_BUFFER_TYPE_RESP):
+            elif (msg_id != response_id):
                 print("Error: Unexpected command response")
+                msg_queue_dict[response_id].task_done()
                 return
 
             payload = getMessagePayload(resp)
@@ -208,6 +212,7 @@ Type help or ? to list commands
             buffer_type = struct.unpack('c', payload)
             buffer_type = int(buffer_type[0][0]) 
             print("buffer type:", buffer_type)
+            msg_queue_dict[response_id].task_done()
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -474,7 +479,6 @@ def ble_process(name, child_conn):
 
 
 def worker():
-    #Will get full messages from pipe (parent_conn), need to put into apprpriate queue
     while True:
         message = retrieveMessage(parent_conn)
         if (message != False):
@@ -482,7 +486,7 @@ def worker():
             payload_size, msg_id = message[1]
             msg_queue_dict[msg_id].put(resp)
         else:
-            print("Failed to retrieve message")
+            #print("Failed to retrieve message")
             time.sleep(0.1)
 
 def worker2(line):
