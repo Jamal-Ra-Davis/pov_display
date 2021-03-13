@@ -186,29 +186,6 @@ Type help or ? to list commands
     def do_get_buffer_type(self, arg):
         'Returns whether single or double buffering is used'
         try:
-            '''
-            out_msg = getMessage(GET_BUFFER_TYPE, None)
-            parent_conn.send(out_msg)
-            response_id = GET_BUFFER_TYPE_RESP
-
-            resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
-            (payload_size, msg_id) = getMessageHeader(resp)
-
-            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
-
-            if (msg_id == NACK):
-                print("Error: command NACKed")
-                msg_queue_dict[response_id].task_done()
-                return
-            elif (msg_id != response_id):
-                print("Error: Unexpected command response")
-                msg_queue_dict[response_id].task_done()
-                return
-
-            payload = getMessagePayload(resp)
-            print(payload)
-            handled = True
-            '''
             response_id = GET_BUFFER_TYPE_RESP
             payload = self.message_helper(GET_BUFFER_TYPE, None, response_id)
             if (payload is None):
@@ -226,33 +203,6 @@ Type help or ? to list commands
     def do_set_buffer_type(self, arg):
         'Sets whether single or double buffering is used: set_buffer_type <single | double>'
         try:
-            '''
-            arg = arg.split()
-            if (arg[0] in ['1', 's', 'S', 'single', 'Single', 'SINGLE']):
-                type = 1
-            elif (arg[0] in ['0', 'd', 'D', 'double', 'Double', 'DOUBLE']):
-                type = 0
-            else:
-                raise Exception("Invalid buffer type: {}".format(arg[0]))
-            payload = struct.pack('c', bytes([type]))
-            out_msg = getMessage(SET_BUFFER_TYPE, payload)
-            print(out_msg)
-
-            parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
-            if (msg_id == ACK):
-                print("Buffer type set successfully")
-            elif (msg_id == NACK):
-                print("Error: command NACKed")
-            else:
-                print("Error: Unexpected command response")
-            '''
-
             #Parse Args
             arg = arg.split()
             if (arg[0] in ['1', 's', 'S', 'single', 'Single', 'SINGLE']):
@@ -278,34 +228,6 @@ Type help or ? to list commands
     def do_clear_display(self, arg):
         'Clears the display buffer (and update): clear_display <update (true/false)>'
         try:
-            '''
-            arg = arg.split()
-            if (arg[0] in ['1', 't', 'T', 'true', 'True', 'TRUE']):
-                update = 1
-            elif (arg[0] in ['0', 'f', 'F', 'false', 'False', 'FALSE']):
-                update = 0
-            else:
-                raise Exception("Invalid boolean: {}".format(arg[0]))
-
-            payload = struct.pack('c', bytes([update]))
-            out_msg = getMessage(CLEAR_DISPLAY, payload)
-            print(out_msg)
-
-            parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
-            if (msg_id == ACK):
-                print("Display successfully cleared")
-            elif (msg_id == NACK):
-                print("Error: command NACKed")
-            else:
-                print("Error: Unexpected command response")
-            '''
-
             #Parse Args
             arg = arg.split()
             if (arg[0] in ['1', 't', 'T', 'true', 'True', 'TRUE']):
@@ -314,6 +236,7 @@ Type help or ? to list commands
                 update = 0
             else:
                 raise Exception("Invalid boolean: {}".format(arg[0]))
+            payload = struct.pack('c', bytes([update]))
 
             #Setup message
             response_id = ACK
@@ -330,27 +253,6 @@ Type help or ? to list commands
     def do_update_display(self, arg):
         'Update display (switch front and rear buffers)'
         try:
-            '''
-            out_msg = getMessage(UPDATE_DISPLAY, None)
-            print(out_msg)
-
-            parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
-            if (msg_id == ACK):
-                print("Display successfully updated")
-            elif (msg_id == NACK):
-                print("Error: command NACKed")
-            else:
-                print("Error: Unexpected command response")
-            '''
-
-            #Parse Args
-
             #Setup message
             response_id = ACK
             payload = self.message_helper(UPDATE_DISPLAY, None, response_id)
@@ -366,33 +268,6 @@ Type help or ? to list commands
     def do_get_period(self, arg):
         'Returns last recorded rotation period'
         try:
-            '''
-            out_msg = getMessage(GET_PERIOD, None)
-            print(out_msg)
-
-            parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
-            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
-
-            if (msg_id == NACK):
-                print("Error: command NACKed")
-                return
-            elif (msg_id != GET_PERIOD_RESP):
-                print("Error: Unexpected command response")
-                return
-
-            payload = getMessagePayload(resp)
-            print(payload)
-            handled = True
-            (period) = struct.unpack('i', payload) 
-            print("Period: %u us"%(period))
-            '''
-
             response_id = GET_PERIOD_RESP
             payload = self.message_helper(GET_PERIOD, None, response_id)
             if (payload is None):
@@ -407,42 +282,6 @@ Type help or ? to list commands
     def do_button_event(self, arg):
         'Sends "button" command to display: button_event <button idx> <press | release | tap>'
         try:
-            '''
-            arg = arg.split()
-            if (not str(arg[0]).isdigit()):
-                raise Exception("Invalid button index: {}".format(arg[0]))
-            button_idx = int(arg[0])
-
-            if (arg[1] in ['0', 'p', 'P', 'press', 'Press', 'PRESS']):
-                event = 0
-            elif (arg[1] in ['1', 'r', 'R', 'release', 'Release', 'RELEASE']):
-                event = 1
-            elif (arg[1] in ['2', 't', 'T', 'tap', 'Tap', 'TAP']):
-                event = 2
-            else:
-                raise Exception("Invalid button event: {}".format(arg[1]))
-            
-            payload = struct.pack('i i', event, button_idx)
-            out_msg = getMessage(BUTTON_EVENT, payload)
-            print(out_msg)
-
-            parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
-            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
-
-            if (msg_id == ACK):
-                print("Successfully sent button event")
-            elif (msg_id == NACK):
-                print("Error: command NACKed")
-            else:
-                print("Error: Unexpected command response")
-            '''
-            
             #Parse Args
             arg = arg.split()
             if (not str(arg[0]).isdigit()):
