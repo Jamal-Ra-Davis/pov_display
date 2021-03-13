@@ -141,6 +141,29 @@ Type help or ? to list commands
     prompt = '>>'
     file = None
 
+    def message_helper(self, send_msg_id, send_payload, resp_msg_id):
+        out_msg = getMessage(send_msg_id, send_payload)
+        parent_conn.send(out_msg)
+        response_id = resp_msg_id
+
+        resp = msg_queue_dict[resp_msg_id].get(timeout=TIMEOUT_PERIOD)
+        (payload_size, msg_id) = getMessageHeader(resp)
+
+        print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+        if (msg_id == NACK):
+            print("Error: command NACKed")
+            msg_queue_dict[resp_msg_id].task_done()
+            return None
+        elif (msg_id != resp_msg_id):
+            print("Error: Unexpected command response")
+            msg_queue_dict[resp_msg_id].task_done()
+            return None
+
+        payload = getMessagePayload(resp)
+        print(payload)
+        return payload
+
     def do_test(self, arg):
         'Test Command'
         print("Test 1")
@@ -148,11 +171,11 @@ Type help or ? to list commands
     def do_get_display_size(self, arg):
         'Returns the dimensions of the display'
         try:
+            '''
             out_msg = getMessage(GET_DISPLAY_SIZE, None)
             parent_conn.send(out_msg)
             response_id = GET_DISPLAY_SIZE_RESP
 
-            #message = retrieveMessage(parent_conn)
             resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
             (payload_size, msg_id) = getMessageHeader(resp)
 
@@ -173,6 +196,13 @@ Type help or ? to list commands
             (l, w, h) = struct.unpack('i i i', payload) 
             print("Length: %d, Width: %d, Height: %d"%(l, w, h))
             msg_queue_dict[response_id].task_done()
+            '''
+            payload = self.message_helper(GET_DISPLAY_SIZE, None, GET_DISPLAY_SIZE_RESP)
+            if (payload is None):
+                return 
+            (l, w, h) = struct.unpack('i i i', payload) 
+            print("Length: %d, Width: %d, Height: %d"%(l, w, h))
+            msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
@@ -184,13 +214,6 @@ Type help or ? to list commands
             out_msg = getMessage(GET_BUFFER_TYPE, None)
             parent_conn.send(out_msg)
             response_id = GET_BUFFER_TYPE_RESP
-
-            #message = retrieveMessage(parent_conn)
-            #if (message is False):
-            #    print("Error: Failed to get message")
-            #    return
-            #resp = message[0]
-            #payload_size, msg_id = message[1]
 
             resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
             (payload_size, msg_id) = getMessageHeader(resp)
@@ -209,6 +232,7 @@ Type help or ? to list commands
             payload = getMessagePayload(resp)
             print(payload)
             handled = True
+
             buffer_type = struct.unpack('c', payload)
             buffer_type = int(buffer_type[0][0]) 
             print("buffer type:", buffer_type)
