@@ -278,6 +278,7 @@ Type help or ? to list commands
     def do_clear_display(self, arg):
         'Clears the display buffer (and update): clear_display <update (true/false)>'
         try:
+            '''
             arg = arg.split()
             if (arg[0] in ['1', 't', 'T', 'true', 'True', 'TRUE']):
                 update = 1
@@ -303,6 +304,24 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+            '''
+
+            #Parse Args
+            arg = arg.split()
+            if (arg[0] in ['1', 't', 'T', 'true', 'True', 'TRUE']):
+                update = 1
+            elif (arg[0] in ['0', 'f', 'F', 'false', 'False', 'FALSE']):
+                update = 0
+            else:
+                raise Exception("Invalid boolean: {}".format(arg[0]))
+
+            #Setup message
+            response_id = ACK
+            payload = self.message_helper(CLEAR_DISPLAY, payload, response_id)
+            if (payload is None):
+                return
+            print("Display successfully cleared")
+            msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
@@ -311,6 +330,7 @@ Type help or ? to list commands
     def do_update_display(self, arg):
         'Update display (switch front and rear buffers)'
         try:
+            '''
             out_msg = getMessage(UPDATE_DISPLAY, None)
             print(out_msg)
 
@@ -327,6 +347,17 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+            '''
+
+            #Parse Args
+
+            #Setup message
+            response_id = ACK
+            payload = self.message_helper(UPDATE_DISPLAY, None, response_id)
+            if (payload is None):
+                return
+            print("Display successfully updated")
+            msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
@@ -335,6 +366,7 @@ Type help or ? to list commands
     def do_get_period(self, arg):
         'Returns last recorded rotation period'
         try:
+            '''
             out_msg = getMessage(GET_PERIOD, None)
             print(out_msg)
 
@@ -359,6 +391,14 @@ Type help or ? to list commands
             handled = True
             (period) = struct.unpack('i', payload) 
             print("Period: %u us"%(period))
+            '''
+
+            response_id = GET_PERIOD_RESP
+            payload = self.message_helper(GET_PERIOD, None, response_id)
+            if (payload is None):
+                return
+            (period) = struct.unpack('i', payload) 
+            print("Period: %u us"%(period))      
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
@@ -367,6 +407,7 @@ Type help or ? to list commands
     def do_button_event(self, arg):
         'Sends "button" command to display: button_event <button idx> <press | release | tap>'
         try:
+            '''
             arg = arg.split()
             if (not str(arg[0]).isdigit()):
                 raise Exception("Invalid button index: {}".format(arg[0]))
@@ -400,6 +441,31 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+            '''
+            
+            #Parse Args
+            arg = arg.split()
+            if (not str(arg[0]).isdigit()):
+                raise Exception("Invalid button index: {}".format(arg[0]))
+            button_idx = int(arg[0])
+
+            if (arg[1] in ['0', 'p', 'P', 'press', 'Press', 'PRESS']):
+                event = 0
+            elif (arg[1] in ['1', 'r', 'R', 'release', 'Release', 'RELEASE']):
+                event = 1
+            elif (arg[1] in ['2', 't', 'T', 'tap', 'Tap', 'TAP']):
+                event = 2
+            else:
+                raise Exception("Invalid button event: {}".format(arg[1]))
+            payload = struct.pack('i i', event, button_idx)
+
+            #Setup message
+            response_id = ACK
+            payload = self.message_helper(BUTTON_EVENT, payload, response_id)
+            if (payload is None):
+                return
+            print("Successfully sent button event")
+            msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
         except BaseException:
