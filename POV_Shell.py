@@ -171,33 +171,8 @@ Type help or ? to list commands
     def do_get_display_size(self, arg):
         'Returns the dimensions of the display'
         try:
-            '''
-            out_msg = getMessage(GET_DISPLAY_SIZE, None)
-            parent_conn.send(out_msg)
             response_id = GET_DISPLAY_SIZE_RESP
-
-            resp = msg_queue_dict[response_id].get(timeout=TIMEOUT_PERIOD)
-            (payload_size, msg_id) = getMessageHeader(resp)
-
-            print("Received message: %d of size %d bytes"%(msg_id, payload_size))
-
-            if (msg_id == NACK):
-                print("Error: command NACKed")
-                msg_queue_dict[response_id].task_done()
-                return
-            elif (msg_id != response_id):
-                print("Error: Unexpected command response")
-                msg_queue_dict[response_id].task_done()
-                return
-
-            payload = getMessagePayload(resp)
-            print(payload)
-            handled = True
-            (l, w, h) = struct.unpack('i i i', payload) 
-            print("Length: %d, Width: %d, Height: %d"%(l, w, h))
-            msg_queue_dict[response_id].task_done()
-            '''
-            payload = self.message_helper(GET_DISPLAY_SIZE, None, GET_DISPLAY_SIZE_RESP)
+            payload = self.message_helper(GET_DISPLAY_SIZE, None, response_id)
             if (payload is None):
                 return 
             (l, w, h) = struct.unpack('i i i', payload) 
@@ -211,6 +186,7 @@ Type help or ? to list commands
     def do_get_buffer_type(self, arg):
         'Returns whether single or double buffering is used'
         try:
+            '''
             out_msg = getMessage(GET_BUFFER_TYPE, None)
             parent_conn.send(out_msg)
             response_id = GET_BUFFER_TYPE_RESP
@@ -232,17 +208,25 @@ Type help or ? to list commands
             payload = getMessagePayload(resp)
             print(payload)
             handled = True
+            '''
+            response_id = GET_BUFFER_TYPE_RESP
+            payload = self.message_helper(GET_BUFFER_TYPE, None, response_id)
+            if (payload is None):
+                return
 
             buffer_type = struct.unpack('c', payload)
             buffer_type = int(buffer_type[0][0]) 
             print("buffer type:", buffer_type)
             msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
     def do_set_buffer_type(self, arg):
         'Sets whether single or double buffering is used: set_buffer_type <single | double>'
         try:
+            '''
             arg = arg.split()
             if (arg[0] in ['1', 's', 'S', 'single', 'Single', 'SINGLE']):
                 type = 1
@@ -267,6 +251,27 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+            '''
+
+            #Parse Args
+            arg = arg.split()
+            if (arg[0] in ['1', 's', 'S', 'single', 'Single', 'SINGLE']):
+                type = 1
+            elif (arg[0] in ['0', 'd', 'D', 'double', 'Double', 'DOUBLE']):
+                type = 0
+            else:
+                raise Exception("Invalid buffer type: {}".format(arg[0]))
+            payload = struct.pack('c', bytes([type]))
+
+            #Setup message
+            response_id = ACK
+            payload = self.message_helper(SET_BUFFER_TYPE, payload, response_id)
+            if (payload is None):
+                return
+            print("Buffer type set successfully")
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -298,6 +303,8 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
     
@@ -320,7 +327,8 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
-            pass
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
     
@@ -351,6 +359,8 @@ Type help or ? to list commands
             handled = True
             (period) = struct.unpack('i', payload) 
             print("Period: %u us"%(period))
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -390,6 +400,8 @@ Type help or ? to list commands
                 print("Error: command NACKed")
             else:
                 print("Error: Unexpected command response")
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -525,7 +537,7 @@ if __name__ == '__main__':
     bt_process = multiprocessing.Process(target=ble_process, args=(1, child_conn))
     bt_process.start()
 
-    for i in range(MSG_CMD_NUM):
+    for i in range(RESP_CMD_NUM):
         msg_queue_dict[i] = queue.Queue()
 
     line = 'cool'
