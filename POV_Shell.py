@@ -2,7 +2,7 @@ import sys, cmd, struct
 import asyncio
 from bleak import BleakClient
 from bleak import exc
-import threading
+import threading, queue
 import time
 import logging
 import multiprocessing
@@ -29,6 +29,9 @@ GET_PERIOD_RESP =        4
 LOG_MSG =                5
 GET_REGISTER_RESP =      6
 
+MSG_CMD_NUM = 11
+RESP_CMD_NUM = 7
+
 address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
 WRITE_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
@@ -50,6 +53,8 @@ mutex = threading.Lock()
 LOGGING_ENABLED = False
 LOG_EN = 'LOG_ENABLED'
 LOG_DIS = 'LOG_DISABLED'
+
+msg_queue_dict = {}
 
 
 def getMessage(message_id, payload):
@@ -146,19 +151,24 @@ Type help or ? to list commands
         try:
             out_msg = getMessage(GET_DISPLAY_SIZE, None)
             parent_conn.send(out_msg)
-            message = retrieveMessage(parent_conn)
-            if (message is False):
-                print("Error: Failed to get message")
-                return
-            resp = message[0]
-            payload_size, msg_id = message[1]
+            #message = retrieveMessage(parent_conn)
+            resp = msg_queue_dict[GET_DISPLAY_SIZE_RESP].get(timeout=TIMEOUT_PERIOD)
+            (payload_size, msg_id) = getMessageHeader(resp)
+
+            #if (message is False):
+            #    print("Error: Failed to get message")
+            #    return
+            #resp = message[0]
+            #payload_size, msg_id = message[1]
             print("Received message: %d of size %d bytes"%(msg_id, payload_size))
 
             if (msg_id == NACK):
                 print("Error: command NACKed")
+                msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
                 return
             elif (msg_id != GET_DISPLAY_SIZE_RESP):
                 print("Error: Unexpected command response")
+                msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
                 return
 
             payload = getMessagePayload(resp)
@@ -166,6 +176,9 @@ Type help or ? to list commands
             handled = True
             (l, w, h) = struct.unpack('i i i', payload) 
             print("Length: %d, Width: %d, Height: %d"%(l, w, h))
+            msg_queue_dict[GET_DISPLAY_SIZE_RESP].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
@@ -454,10 +467,43 @@ def ble_process(name, child_conn):
     loop.create_task(run_notification_and_name(address, loop, child_conn))
     loop.run_forever()
 
+
+
+
+
+
+
+def worker():
+    #Will get full messages from pipe (parent_conn), need to put into apprpriate queue
+    while True:
+        message = retrieveMessage(parent_conn)
+        if (message != False):
+            resp = message[0]
+            payload_size, msg_id = message[1]
+            msg_queue_dict[msg_id].put(resp)
+        else:
+            print("Failed to retrieve message")
+            time.sleep(0.1)
+
+def worker2(line):
+    cnt = 0
+    while True:
+        print("Hello thread", cnt, line)
+        cnt += 1
+        time.sleep(5)
+
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
     bt_process = multiprocessing.Process(target=ble_process, args=(1, child_conn))
     bt_process.start()
+
+    for i in range(MSG_CMD_NUM):
+        msg_queue_dict[i] = queue.Queue()
+
+    line = 'cool'
+    #threading.Thread(target=worker2, daemon=True, args=(line,)).start()
+    threading.Thread(target=worker, daemon=True).start()
+
     POV_Shell().cmdloop()
 
 
