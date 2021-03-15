@@ -8,6 +8,7 @@ import logging
 import multiprocessing
 from inputs import get_gamepad
 
+
 #Message Commands
 GET_DISPLAY_SIZE =        0
 GET_BUFFER_TYPE =         1
@@ -32,6 +33,30 @@ GET_REGISTER_RESP =      6
 
 MSG_CMD_NUM = 11
 RESP_CMD_NUM = 7
+
+#Button events
+BTN_PRESS = 0
+BTN_RELEASE = 1
+BTN_TAP = 2
+
+#Button Keys
+BTN_KEY_TRIANGLE = 0
+BTN_KEY_SQUARE = 1
+BTN_KEY_CROSS = 2
+BTN_KEY_CIRCLE = 3
+BTN_KEY_LBUMPER = 4
+BTN_KEY_RBUMPER = 5
+BTN_KEY_LSTICK = 6
+BTN_KEY_RSTICK = 7
+BTN_KEY_SHARE = 8
+BTN_KEY_OPTIONS = 9
+BTN_KEY_DUP = 10
+BTN_KEY_DLEFT = 11
+BTN_KEY_DDOWN = 12
+BTN_KEY_DRIGHT = 13
+BTN_KEY_DX = 14
+BTN_KEY_DY = 15
+
 
 address = 'F0:C7:7F:94:CC:6C'
 NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
@@ -119,6 +144,47 @@ def notification_handler(sender, data):
                 break
         mutex.release()
 
+def message_helper(send_msg_id, send_payload, resp_msg_id):
+    out_msg = getMessage(send_msg_id, send_payload)
+    parent_conn.send(out_msg)
+    response_id = resp_msg_id
+
+    resp = msg_queue_dict[resp_msg_id].get(timeout=TIMEOUT_PERIOD)
+    (payload_size, msg_id) = getMessageHeader(resp)
+
+    print("Received message: %d of size %d bytes"%(msg_id, payload_size))
+
+    if (msg_id == NACK):
+        print("Error: command NACKed")
+        msg_queue_dict[resp_msg_id].task_done()
+        return None
+    elif (msg_id != resp_msg_id):
+        print("Error: Unexpected command response")
+        msg_queue_dict[resp_msg_id].task_done()
+        return None
+
+    payload = getMessagePayload(resp)
+    print(payload)
+    return payload
+
+
+def button_event(event, button_idx):
+    if (not str(event).isdigit()):
+        return -1
+    if (not str(button_idx).isdigit()):
+        return -1
+    payload = struct.pack('i i', event, button_idx)
+
+    #Setup message
+    response_id = ACK
+    try:
+        payload = message_helper(BUTTON_EVENT, payload, response_id)
+        if (payload is None):
+            return
+        print("Successfully sent button event")
+        msg_queue_dict[response_id].task_done()
+    except queue.Empty as e:
+            print("Error: Timed out waiting for response")
 
 class POV_Shell(cmd.Cmd):
     #intro = 'POV Shell: Have fun'
@@ -142,29 +208,6 @@ Type help or ? to list commands
     prompt = '>>'
     file = None
 
-    def message_helper(self, send_msg_id, send_payload, resp_msg_id):
-        out_msg = getMessage(send_msg_id, send_payload)
-        parent_conn.send(out_msg)
-        response_id = resp_msg_id
-
-        resp = msg_queue_dict[resp_msg_id].get(timeout=TIMEOUT_PERIOD)
-        (payload_size, msg_id) = getMessageHeader(resp)
-
-        print("Received message: %d of size %d bytes"%(msg_id, payload_size))
-
-        if (msg_id == NACK):
-            print("Error: command NACKed")
-            msg_queue_dict[resp_msg_id].task_done()
-            return None
-        elif (msg_id != resp_msg_id):
-            print("Error: Unexpected command response")
-            msg_queue_dict[resp_msg_id].task_done()
-            return None
-
-        payload = getMessagePayload(resp)
-        print(payload)
-        return payload
-
     def do_test(self, arg):
         'Test Command'
         print("Test 1")
@@ -173,7 +216,7 @@ Type help or ? to list commands
         'Returns the dimensions of the display'
         try:
             response_id = GET_DISPLAY_SIZE_RESP
-            payload = self.message_helper(GET_DISPLAY_SIZE, None, response_id)
+            payload = message_helper(GET_DISPLAY_SIZE, None, response_id)
             if (payload is None):
                 return 
             (l, w, h) = struct.unpack('i i i', payload) 
@@ -188,7 +231,7 @@ Type help or ? to list commands
         'Returns whether single or double buffering is used'
         try:
             response_id = GET_BUFFER_TYPE_RESP
-            payload = self.message_helper(GET_BUFFER_TYPE, None, response_id)
+            payload = message_helper(GET_BUFFER_TYPE, None, response_id)
             if (payload is None):
                 return
 
@@ -216,7 +259,7 @@ Type help or ? to list commands
 
             #Setup message
             response_id = ACK
-            payload = self.message_helper(SET_BUFFER_TYPE, payload, response_id)
+            payload = message_helper(SET_BUFFER_TYPE, payload, response_id)
             if (payload is None):
                 return
             print("Buffer type set successfully")
@@ -241,7 +284,7 @@ Type help or ? to list commands
 
             #Setup message
             response_id = ACK
-            payload = self.message_helper(CLEAR_DISPLAY, payload, response_id)
+            payload = message_helper(CLEAR_DISPLAY, payload, response_id)
             if (payload is None):
                 return
             print("Display successfully cleared")
@@ -256,7 +299,7 @@ Type help or ? to list commands
         try:
             #Setup message
             response_id = ACK
-            payload = self.message_helper(UPDATE_DISPLAY, None, response_id)
+            payload = message_helper(UPDATE_DISPLAY, None, response_id)
             if (payload is None):
                 return
             print("Display successfully updated")
@@ -270,7 +313,7 @@ Type help or ? to list commands
         'Returns last recorded rotation period'
         try:
             response_id = GET_PERIOD_RESP
-            payload = self.message_helper(GET_PERIOD, None, response_id)
+            payload = message_helper(GET_PERIOD, None, response_id)
             if (payload is None):
                 return
             (period) = struct.unpack('i', payload) 
@@ -301,7 +344,7 @@ Type help or ? to list commands
 
             #Setup message
             response_id = ACK
-            payload = self.message_helper(BUTTON_EVENT, payload, response_id)
+            payload = message_helper(BUTTON_EVENT, payload, response_id)
             if (payload is None):
                 return
             print("Successfully sent button event")
@@ -438,61 +481,171 @@ def worker2(line):
         cnt += 1
         time.sleep(5)
 
+
 def gamepad_handler():
     print("In gamepad handler")
+    connect_attempts = 10
     while 1:
         try:
             while 1:
                 events = get_gamepad()
                 for event in events:
                     pad_event = ""
+                    btn_event = -1
+                    btn_key = -1
                     if (event.ev_type == 'Key'):
                         if (event.code == 'BTN_NORTH'):
                             pad_event += "Triangle: "
+                            btn_key = BTN_KEY_TRIANGLE
                         elif (event.code == 'BTN_WEST'):
                             pad_event += "Square: "
+                            btn_key = BTN_KEY_SQUARE
                         elif (event.code == 'BTN_SOUTH'):
                             pad_event += "Cross: "
+                            btn_key = BTN_KEY_CROSS
                         elif (event.code == 'BTN_EAST'):
                             pad_event += "Circle: "
+                            btn_key = BTN_KEY_CIRCLE
                         elif (event.code == 'BTN_TL'):
                             pad_event += "Left Bumper: "
+                            btn_key = BTN_KEY_LBUMPER
                         elif (event.code == 'BTN_TR'):
                             pad_event += "Right Bumper: "
+                            btn_key = BTN_KEY_RBUMPER
                         elif (event.code == 'BTN_START'):
                             pad_event += "Share: "
+                            btn_key = BTN_KEY_SHARE
                         elif (event.code == 'BTN_SELECT'):
                             pad_event += "Options: "
+                            btn_key = BTN_KEY_OPTIONS
                         elif (event.code == 'BTN_THUMBL'):
                             pad_event += "Left Stick: "
+                            btn_key = BTN_KEY_LSTICK
                         elif (event.code == 'BTN_THUMBR'):
                             pad_event += "Right Stick: "
+                            btn_key = BTN_KEY_RSTICK
 
                         if (event.state == 1):
                             pad_event += "Pressed"
+                            btn_event = BTN_PRESS
                         elif (event.state == 0):
                             pad_event += "Released"
+                            btn_event = BTN_RELEASE
 
-                    if (event.ev_type == 'Absolute' and "ABS_HAT0" in event.code):
+                    elif (event.ev_type == 'Absolute' and "ABS_HAT0" in event.code):
                         if (event.code == 'ABS_HAT0X' and event.state == 0):
                             pad_event = "Dpad-X: Released"
+                            btn_key = BTN_KEY_DX
+                            btn_event = BTN_RELEASE
                         elif (event.code == 'ABS_HAT0X' and event.state < 0):
                             pad_event = "Dpad Left: Pressed"
+                            btn_key = BTN_KEY_DLEFT
+                            btn_event = BTN_PRESS
                         elif (event.code == 'ABS_HAT0X' and event.state > 0):
                             pad_event = "Dpad Right: Pressed"
+                            btn_key = BTN_KEY_DRIGHT
+                            btn_event = BTN_PRESS
                         elif (event.code == 'ABS_HAT0Y' and event.state == 0):
                             pad_event = "Dpad-Y: Released"
+                            btn_key = BTN_KEY_DY
+                            btn_event = BTN_RELEASE
                         elif (event.code == 'ABS_HAT0Y' and event.state < 0):
                             pad_event = "Dpad Up: Pressed"
+                            btn_key = BTN_KEY_DUP
+                            btn_event = BTN_PRESS
                         elif (event.code == 'ABS_HAT0Y' and event.state > 0):
                             pad_event = "Dpad Down: Pressed"
+                            btn_key = BTN_KEY_DDOWN
+                            btn_event = BTN_PRESS
                     
                     if (pad_event != ""):
                         print(pad_event)
+                    if (btn_event != -1 and btn_key != -1):
+                        button_event(btn_event, btn_key)
         except:
             print("Error: Gamepad not found...")
+            connect_attempts -= 1
+            if (connect_attempts <= 0):
+                print("Giving up connecting to gamepad")
+                return 
             time.sleep(20)
 
+def gp_test():
+    while 1:
+        events = get_gamepad()
+        for event in events:
+            pad_event = ""
+            btn_event = -1
+            btn_key = -1
+            if (event.ev_type == 'Key'):
+                if (event.code == 'BTN_NORTH'):
+                    pad_event += "Triangle: "
+                    btn_key = BTN_KEY_TRIANGLE
+                elif (event.code == 'BTN_WEST'):
+                    pad_event += "Square: "
+                    btn_key = BTN_KEY_SQUARE
+                elif (event.code == 'BTN_SOUTH'):
+                    pad_event += "Cross: "
+                    btn_key = BTN_KEY_CROSS
+                elif (event.code == 'BTN_EAST'):
+                    pad_event += "Circle: "
+                    btn_key = BTN_KEY_CIRCLE
+                elif (event.code == 'BTN_TL'):
+                    pad_event += "Left Bumper: "
+                    btn_key = BTN_KEY_LBUMPER
+                elif (event.code == 'BTN_TR'):
+                    pad_event += "Right Bumper: "
+                    btn_key = BTN_KEY_RBUMPER
+                elif (event.code == 'BTN_START'):
+                    pad_event += "Share: "
+                    btn_key = BTN_KEY_SHARE
+                elif (event.code == 'BTN_SELECT'):
+                    pad_event += "Options: "
+                    btn_key = BTN_KEY_OPTIONS
+                elif (event.code == 'BTN_THUMBL'):
+                    pad_event += "Left Stick: "
+                    btn_key = BTN_KEY_LSTICK
+                elif (event.code == 'BTN_THUMBR'):
+                    pad_event += "Right Stick: "
+                    btn_key = BTN_KEY_RSTICK
+
+                if (event.state == 1):
+                    pad_event += "Pressed"
+                    btn_event = BTN_PRESS
+                elif (event.state == 0):
+                    pad_event += "Released"
+                    btn_event = BTN_RELEASE
+
+            elif (event.ev_type == 'Absolute' and "ABS_HAT0" in event.code):
+                if (event.code == 'ABS_HAT0X' and event.state == 0):
+                    pad_event = "Dpad-X: Released"
+                    btn_key = BTN_KEY_DX
+                    btn_event = BTN_RELEASE
+                elif (event.code == 'ABS_HAT0X' and event.state < 0):
+                    pad_event = "Dpad Left: Pressed"
+                    btn_key = BTN_KEY_DLEFT
+                    btn_event = BTN_PRESS
+                elif (event.code == 'ABS_HAT0X' and event.state > 0):
+                    pad_event = "Dpad Right: Pressed"
+                    btn_key = BTN_KEY_DRIGHT
+                    btn_event = BTN_PRESS
+                elif (event.code == 'ABS_HAT0Y' and event.state == 0):
+                    pad_event = "Dpad-Y: Released"
+                    btn_key = BTN_KEY_DY
+                    btn_event = BTN_RELEASE
+                elif (event.code == 'ABS_HAT0Y' and event.state < 0):
+                    pad_event = "Dpad Up: Pressed"
+                    btn_key = BTN_KEY_DUP
+                    btn_event = BTN_PRESS
+                elif (event.code == 'ABS_HAT0Y' and event.state > 0):
+                    pad_event = "Dpad Down: Pressed"
+                    btn_key = BTN_KEY_DDOWN
+                    btn_event = BTN_PRESS
+            
+            if (pad_event != ""):
+                print(pad_event)
+            #if (event != -1 and key != -1):
+            #    button_event(event, key)
 
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
