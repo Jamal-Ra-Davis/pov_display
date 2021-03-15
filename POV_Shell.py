@@ -6,6 +6,7 @@ import threading, queue
 import time
 import logging
 import multiprocessing
+from inputs import get_gamepad
 
 #Message Commands
 GET_DISPLAY_SIZE =        0
@@ -437,6 +438,62 @@ def worker2(line):
         cnt += 1
         time.sleep(5)
 
+def gamepad_handler():
+    print("In gamepad handler")
+    while 1:
+        try:
+            while 1:
+                events = get_gamepad()
+                for event in events:
+                    pad_event = ""
+                    if (event.ev_type == 'Key'):
+                        if (event.code == 'BTN_NORTH'):
+                            pad_event += "Triangle: "
+                        elif (event.code == 'BTN_WEST'):
+                            pad_event += "Square: "
+                        elif (event.code == 'BTN_SOUTH'):
+                            pad_event += "Cross: "
+                        elif (event.code == 'BTN_EAST'):
+                            pad_event += "Circle: "
+                        elif (event.code == 'BTN_TL'):
+                            pad_event += "Left Bumper: "
+                        elif (event.code == 'BTN_TR'):
+                            pad_event += "Right Bumper: "
+                        elif (event.code == 'BTN_START'):
+                            pad_event += "Share: "
+                        elif (event.code == 'BTN_SELECT'):
+                            pad_event += "Options: "
+                        elif (event.code == 'BTN_THUMBL'):
+                            pad_event += "Left Stick: "
+                        elif (event.code == 'BTN_THUMBR'):
+                            pad_event += "Right Stick: "
+
+                        if (event.state == 1):
+                            pad_event += "Pressed"
+                        elif (event.state == 0):
+                            pad_event += "Released"
+
+                    if (event.ev_type == 'Absolute' and "ABS_HAT0" in event.code):
+                        if (event.code == 'ABS_HAT0X' and event.state == 0):
+                            pad_event = "Dpad-X: Released"
+                        elif (event.code == 'ABS_HAT0X' and event.state < 0):
+                            pad_event = "Dpad Left: Pressed"
+                        elif (event.code == 'ABS_HAT0X' and event.state > 0):
+                            pad_event = "Dpad Right: Pressed"
+                        elif (event.code == 'ABS_HAT0Y' and event.state == 0):
+                            pad_event = "Dpad-Y: Released"
+                        elif (event.code == 'ABS_HAT0Y' and event.state < 0):
+                            pad_event = "Dpad Up: Pressed"
+                        elif (event.code == 'ABS_HAT0Y' and event.state > 0):
+                            pad_event = "Dpad Down: Pressed"
+                    
+                    if (pad_event != ""):
+                        print(pad_event)
+        except:
+            print("Error: Gamepad not found...")
+            time.sleep(20)
+
+
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
     bt_process = multiprocessing.Process(target=ble_process, args=(1, child_conn))
@@ -448,6 +505,7 @@ if __name__ == '__main__':
     line = 'cool'
     #threading.Thread(target=worker2, daemon=True, args=(line,)).start()
     threading.Thread(target=worker, daemon=True).start()
+    threading.Thread(target=gamepad_handler, daemon=True).start()
 
     POV_Shell().cmdloop()
 
