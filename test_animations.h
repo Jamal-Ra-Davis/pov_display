@@ -162,27 +162,43 @@ void multicolorFillAnimation(doubleBuffer *frame_buffer)
     }
     //delay(500);
   }
+/*
+  static uint16_t idx = 0;
+  uint16_t x = idx % LENGTH;
+  uint16_t y = (idx / LENGTH) % WIDTH;
+  uint16_t z = (idx / (LENGTH * WIDTH)) % HEIGHT;
+*/
 }
 void pinWheelAnimation_1(doubleBuffer *frame_buffer)
 {
-  int lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
-  frame_buffer->reset();
-  
-  for (int cycles = 0; cycles<400; cycles++)
-  {
-    frame_buffer->clear();
-    for (int i=0; i<LENGTH; i++)
-    {
-      int W_0 = lookup[(i+cycles)%10];
-      int W_1 = lookup[(i+400-cycles)%10]; 
-      int W_2 = lookup[(i+cycles+6)%10];
+  static const uint8_t lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
+  static bool start = true;
+  static uint16_t cycles = 0;
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 10; 
 
-      frame_buffer->setColorChannel(i, W_0, 0, RED, 255);
-      frame_buffer->setColorChannel(i, W_0, 2, GREEN, 255);
-      frame_buffer->setColorChannel(i, W_0, 5, BLUE, 255);
+  if (cnt++ % delay_cnt)
+  {
+    if (start == true)
+    {
+      frame_buffer->forceDoubleBuffer();
     }
-    frame_buffer->update();
-    delay(50);
+    else
+    {
+      cycles++;
+      cycles %= 400;
+    }
+  }
+
+  for (int i=0; i<LENGTH; i++)
+  {
+    int W_0 = lookup[(i+cycles)%10];
+    int W_1 = lookup[(i+400-cycles)%10]; 
+    int W_2 = lookup[(i+cycles+6)%10];
+
+    frame_buffer->setColorChannel(i, W_0, 0, RED, 255);
+    frame_buffer->setColorChannel(i, W_0, 2, GREEN, 255);
+    frame_buffer->setColorChannel(i, W_0, 5, BLUE, 255);
   }
 }
 
