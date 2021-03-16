@@ -58,7 +58,7 @@ void pinWheelAnimation_0(doubleBuffer *frame_buffer)
   static uint8_t r_, g_, b_;
   static uint16_t cycles = 0;
 
-  if (cnt ++ % delay_cnt == 0)
+  if (cnt++ % delay_cnt == 0)
   {
     if (start == true)
     {
@@ -97,37 +97,48 @@ void pinWheelAnimation_0(doubleBuffer *frame_buffer)
 
 void vortexAnimation(doubleBuffer *frame_buffer)
 {
-  int8_t lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
-  
-  //frame_buffer->forceSingleBuffer();
-  frame_buffer->reset();
-  uint8_t color_r, color_g, color_b;
-  doubleBuffer::randColor(&color_r, &color_g, &color_b);
-  
-  
-  for (int cycles = 0; cycles<400; cycles++)
-  {
-    frame_buffer->clear();
-    if (cycles % 10 == 0)
-      doubleBuffer::randColor(&color_r, &color_g, &color_b);
-    for (int i=0; i<LENGTH; i++)
-    {
-      int W_0 = (lookup2[(i+cycles)%10] + cycles) % 8;
-      int W_1 = (lookup2[(i+cycles+3)%10] + cycles + 1) % 8; 
-      int W_2 = (lookup2[(i+cycles+6)%10] + cycles + 2) % 8; 
-      int W_3 = (lookup2[(i+cycles+9)%10] + cycles + 3) % 8;
-      int W_4 = (lookup2[(i+cycles+12)%10] + cycles + 4) % 8;
-      int W_5 = (lookup2[(i+cycles+15)%10] + cycles + 5) % 8;      
+  static const uint8_t lookup2[10] = {0, 0, 0, 0, 0, 7, 7, 7, 7, 7};
+  static bool start = true;
 
-      frame_buffer->setColors(i, W_0, 0, color_r, color_g, color_b);
-      frame_buffer->setColors(i, W_1, 1, color_r, color_g, color_b);
-      frame_buffer->setColors(i, W_2, 2, color_r, color_g, color_b);
-      frame_buffer->setColors(i, W_3, 3, color_r, color_g, color_b);
-      frame_buffer->setColors(i, W_4, 4, color_r, color_g, color_b);
-      frame_buffer->setColors(i, W_5, 5, color_r, color_g, color_b);
+  
+  static uint8_t color_r, color_g, color_b;
+  static uint16_t cycles = 0;
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 10; 
+
+  if (cnt++ % delay_cnt == 0)
+  {  
+    if (start == true)
+    {
+      cycles = 0;
+      frame_buffer->forceDoubleBuffer();
+      doubleBuffer::randColor(&color_r, &color_g, &color_b);
+      start = false;
     }
-    frame_buffer->update();
-    delay(50);
+    else
+    {
+      cycles++;
+      cycles %= 400;
+    }
+  }
+
+  if (cycles % 10 == 0)
+    doubleBuffer::randColor(&color_r, &color_g, &color_b);
+  for (int i=0; i<LENGTH; i++)
+  {
+    int W_0 = (lookup2[(i+cycles)%10] + cycles) % 8;
+    int W_1 = (lookup2[(i+cycles+3)%10] + cycles + 1) % 8; 
+    int W_2 = (lookup2[(i+cycles+6)%10] + cycles + 2) % 8; 
+    int W_3 = (lookup2[(i+cycles+9)%10] + cycles + 3) % 8;
+    int W_4 = (lookup2[(i+cycles+12)%10] + cycles + 4) % 8;
+    int W_5 = (lookup2[(i+cycles+15)%10] + cycles + 5) % 8;      
+
+    frame_buffer->setColors(i, W_0, 0, color_r, color_g, color_b);
+    frame_buffer->setColors(i, W_1, 1, color_r, color_g, color_b);
+    frame_buffer->setColors(i, W_2, 2, color_r, color_g, color_b);
+    frame_buffer->setColors(i, W_3, 3, color_r, color_g, color_b);
+    frame_buffer->setColors(i, W_4, 4, color_r, color_g, color_b);
+    frame_buffer->setColors(i, W_5, 5, color_r, color_g, color_b);
   }
 }
 void multicolorFillAnimation(doubleBuffer *frame_buffer)
