@@ -1291,14 +1291,13 @@ void test_exec()
       offset = start_offset;
     } 
 
-    SERIAL_PRINTF(SerialUSB, "Offset2 = %d\n", offset2);
+    //SERIAL_PRINTF(SerialUSB, "Offset2 = %d\n", offset2);
     offset2--;
-    SERIAL_PRINTF(SerialUSB, "Offset2(post) = %d\n", offset2);
+    //SERIAL_PRINTF(SerialUSB, "Offset2(post) = %d\n", offset2);
     if (offset2 <= -1*message_len*8)
     {
-      SERIAL_PRINTF(SerialUSB, "Offset2 = %d, -1*message_len*8 = %d\n", offset2, -1*message_len*8);
+      //SERIAL_PRINTF(SerialUSB, "Offset2 = %d, -1*message_len*8 = %d\n", offset2, -1*message_len*8);
       offset2 = start_offset2;
     }
   }
-  
 }

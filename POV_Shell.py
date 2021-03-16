@@ -457,13 +457,7 @@ def ble_process(name, child_conn):
     loop.create_task(run_notification_and_name(address, loop, child_conn))
     loop.run_forever()
 
-
-
-
-
-
-
-def worker():
+def message_router():
     while True:
         message = retrieveMessage(parent_conn)
         if (message != False):
@@ -471,16 +465,7 @@ def worker():
             payload_size, msg_id = message[1]
             msg_queue_dict[msg_id].put(resp)
         else:
-            #print("Failed to retrieve message")
             time.sleep(0.1)
-
-def worker2(line):
-    cnt = 0
-    while True:
-        print("Hello thread", cnt, line)
-        cnt += 1
-        time.sleep(5)
-
 
 def gamepad_handler():
     print("In gamepad handler")
@@ -570,83 +555,6 @@ def gamepad_handler():
                 return 
             time.sleep(20)
 
-def gp_test():
-    while 1:
-        events = get_gamepad()
-        for event in events:
-            pad_event = ""
-            btn_event = -1
-            btn_key = -1
-            if (event.ev_type == 'Key'):
-                if (event.code == 'BTN_NORTH'):
-                    pad_event += "Triangle: "
-                    btn_key = BTN_KEY_TRIANGLE
-                elif (event.code == 'BTN_WEST'):
-                    pad_event += "Square: "
-                    btn_key = BTN_KEY_SQUARE
-                elif (event.code == 'BTN_SOUTH'):
-                    pad_event += "Cross: "
-                    btn_key = BTN_KEY_CROSS
-                elif (event.code == 'BTN_EAST'):
-                    pad_event += "Circle: "
-                    btn_key = BTN_KEY_CIRCLE
-                elif (event.code == 'BTN_TL'):
-                    pad_event += "Left Bumper: "
-                    btn_key = BTN_KEY_LBUMPER
-                elif (event.code == 'BTN_TR'):
-                    pad_event += "Right Bumper: "
-                    btn_key = BTN_KEY_RBUMPER
-                elif (event.code == 'BTN_START'):
-                    pad_event += "Share: "
-                    btn_key = BTN_KEY_SHARE
-                elif (event.code == 'BTN_SELECT'):
-                    pad_event += "Options: "
-                    btn_key = BTN_KEY_OPTIONS
-                elif (event.code == 'BTN_THUMBL'):
-                    pad_event += "Left Stick: "
-                    btn_key = BTN_KEY_LSTICK
-                elif (event.code == 'BTN_THUMBR'):
-                    pad_event += "Right Stick: "
-                    btn_key = BTN_KEY_RSTICK
-
-                if (event.state == 1):
-                    pad_event += "Pressed"
-                    btn_event = BTN_PRESS
-                elif (event.state == 0):
-                    pad_event += "Released"
-                    btn_event = BTN_RELEASE
-
-            elif (event.ev_type == 'Absolute' and "ABS_HAT0" in event.code):
-                if (event.code == 'ABS_HAT0X' and event.state == 0):
-                    pad_event = "Dpad-X: Released"
-                    btn_key = BTN_KEY_DX
-                    btn_event = BTN_RELEASE
-                elif (event.code == 'ABS_HAT0X' and event.state < 0):
-                    pad_event = "Dpad Left: Pressed"
-                    btn_key = BTN_KEY_DLEFT
-                    btn_event = BTN_PRESS
-                elif (event.code == 'ABS_HAT0X' and event.state > 0):
-                    pad_event = "Dpad Right: Pressed"
-                    btn_key = BTN_KEY_DRIGHT
-                    btn_event = BTN_PRESS
-                elif (event.code == 'ABS_HAT0Y' and event.state == 0):
-                    pad_event = "Dpad-Y: Released"
-                    btn_key = BTN_KEY_DY
-                    btn_event = BTN_RELEASE
-                elif (event.code == 'ABS_HAT0Y' and event.state < 0):
-                    pad_event = "Dpad Up: Pressed"
-                    btn_key = BTN_KEY_DUP
-                    btn_event = BTN_PRESS
-                elif (event.code == 'ABS_HAT0Y' and event.state > 0):
-                    pad_event = "Dpad Down: Pressed"
-                    btn_key = BTN_KEY_DDOWN
-                    btn_event = BTN_PRESS
-            
-            if (pad_event != ""):
-                print(pad_event)
-            #if (event != -1 and key != -1):
-            #    button_event(event, key)
-
 if __name__ == '__main__':
     parent_conn, child_conn = multiprocessing.Pipe()
     bt_process = multiprocessing.Process(target=ble_process, args=(1, child_conn))
@@ -655,9 +563,7 @@ if __name__ == '__main__':
     for i in range(RESP_CMD_NUM):
         msg_queue_dict[i] = queue.Queue()
 
-    line = 'cool'
-    #threading.Thread(target=worker2, daemon=True, args=(line,)).start()
-    threading.Thread(target=worker, daemon=True).start()
+    threading.Thread(target=message_router, daemon=True).start()
     threading.Thread(target=gamepad_handler, daemon=True).start()
 
     POV_Shell().cmdloop()
