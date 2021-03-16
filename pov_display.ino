@@ -94,7 +94,8 @@ void main_exec()
       scratch_loop();
       break;
     case POV_TEST:
-      test_exec();
+      //test_exec();
+      textAnimation(&frame_buffer);
       break;
     default:
       break;
