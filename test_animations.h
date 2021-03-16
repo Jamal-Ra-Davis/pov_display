@@ -7,92 +7,92 @@
 
 void textAnimation(doubleBuffer *frame_buffer)
 {
-  frame_buffer->reset();
-  char *text[4] = {"CMU ECE",
-                  "HELLO WORLD",
-                  "EMBEDDED SYSTEMS ARE FUN",
-                  "DONT LET YOUR DREAMS BE DREAMS"};
-  int text_sel = rand() % 4;
-  int height = rand()%HEIGHT;
-  int text_len = strlen(text[text_sel]);
-  uint8_t r, g, b;
-  doubleBuffer::randColor(&r, &g, &b);
+  static char *text[4] = {"CMU ECE",
+                          "HELLO WORLD",
+                          "EMBEDDED SYSTEMS ARE FUN",
+                          "DONT LET YOUR DREAMS BE DREAMS"};
+ 
+  static bool start = true;
+  static uint8_t text_sel = 0;
+  static uint8_t height = 0; 
+  static uint16_t text_len = 0;
+  static uint8_t r, g, b;
+  
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 8; 
+  static int16_t idx = 0;
 
-  for (int i=LENGTH + 5; i>(-2*text_len - 5); i--)
+  if (cnt++ % delay_cnt == 0)
   {
-    frame_buffer->clear();
-    writeString(text[text_sel], i, height, r, g, b, frame_buffer);
-    frame_buffer->update();
-    delay(40);
-  }
+    if (start == true)
+    {
+      text_sel = rand() % 4;
+      height = rand() % HEIGHT;
+      text_len = strlen(text[text_sel]);
+      doubleBuffer::randColor(&r, &g, &b);
+      idx = LENGTH + 5;
+      start = false;
+    }
+    else
+    {
+      idx--;
+      if (idx <= (-2*text_len - 5))
+      {
+        start = true;
+      }
+    }
+  } 
+  writeString(text[text_sel], idx, height, r, g, b, frame_buffer);
 }
 
 void pinWheelAnimation_0(doubleBuffer *frame_buffer)
 {
-  int8_t lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
-  int N_CYCLE = 60;
-  frame_buffer->reset();
+  static const int8_t lookup[10] = {0, 1, 2, 3, 4, 5, 4, 3, 2, 1};
+  static const uint16_t N_CYCLE = 60;
 
-  int sel = rand() % 6;
-    uint8_t r_, g_, b_;
-    doubleBuffer::randColor(&r_, &g_, &b_);
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 10; 
 
-    frame_buffer->reset();
-    for (int cycles=0; cycles<N_CYCLE; cycles++)
+  static bool start = true;
+  static uint8_t sel = 0;
+  static uint8_t r_, g_, b_;
+  static uint16_t cycles = 0;
+
+  if (cnt ++ % delay_cnt == 0)
+  {
+    if (start == true)
     {
-      frame_buffer->clear();
-      for (int i=0; i<LENGTH; i++)
-      {
-        //int idx = (i+cycles)% (LENGTH-10);
-        //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
-        
-        int W_0 = lookup[(i+cycles)%10];
-        int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
-        int W_2 = lookup[(i+cycles+6)%10];
-        //if (W_ < WIDTH && W_ >= 0)
-  
-        frame_buffer->setColorChannel(i, W_0, 0, RED, 255);
-        frame_buffer->setColorChannel(i, W_1, 2, GREEN, 255);
-        //frame_buffer->setColorChannel(i, W_2, 5, BLUE, 255);
-  
-        frame_buffer->setColors(i, W_2, 5, r_, g_, b_);
-        
-        //fbuf[i][W_0][0][RED] = 255; 
-        //fbuf[i][W_1][2][GREEN] = 255;
-        //fbuf[i][W_2][5][BLUE] = 255;
-      }
-      frame_buffer->update();
-      delay(50);
+      sel = rand() % 6;
+      doubleBuffer::randColor(&r_, &g_, &b_);
+      frame_buffer->forceDoubleBuffer();
+      cycles = 0;
+      start = false;
     }
-
-    frame_buffer->forceSingleBuffer();
-    for (int cycles=0; cycles<N_CYCLE; cycles++)
+    else
     {
-      frame_buffer->clear();
-      for (int i=0; i<LENGTH; i++)
+      cycles++;
+      if (cycles == N_CYCLE)
       {
-        //int idx = (i+cycles)% (LENGTH-10);
-        //float W = 3*sin(2*PI*i/10.0 + cycles)+3;
-        
-        int W_0 = lookup[(i+cycles)%10];
-        int W_1 = lookup[(i+N_CYCLE-cycles)%10]; 
-        int W_2 = lookup[(i+cycles+6)%10];
-        //if (W_ < WIDTH && W_ >= 0)
-  
-        frame_buffer->setColorChannel(i, W_0, 0, RED, 255);
-        frame_buffer->setColorChannel(i, W_1, 2, GREEN, 255);
-        //frame_buffer->setColorChannel(i, W_2, 5, BLUE, 255);
-  
-        frame_buffer->setColors(i, W_2, 5, r_, g_, b_);
-        
-        //fbuf[i][W_0][0][RED] = 255; 
-        //fbuf[i][W_1][2][GREEN] = 255;
-        //fbuf[i][W_2][5][BLUE] = 255;
+        frame_buffer->forceSingleBuffer();
       }
-      frame_buffer->update();
-      delay(50);
+      if (cycles >= 2*N_CYCLE)
+      {
+        start = true;
+      }
     }
-  
+  }
+
+  uint16_t cycles_ = cycles % N_CYCLE;
+  for (int i=0; i<LENGTH; i++)
+  {        
+    int W_0 = lookup[(i+cycles_)%10];
+    int W_1 = lookup[(i+N_CYCLE-cycles_)%10]; 
+    int W_2 = lookup[(i+cycles_+6)%10];
+
+    frame_buffer->setColorChannel(i, W_0, 0, RED, 255);
+    frame_buffer->setColorChannel(i, W_1, 2, GREEN, 255);
+    frame_buffer->setColors(i, W_2, 5, r_, g_, b_);
+  }
 }
 
 void vortexAnimation(doubleBuffer *frame_buffer)
