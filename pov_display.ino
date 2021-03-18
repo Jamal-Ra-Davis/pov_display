@@ -28,20 +28,24 @@
 #define REFRESH_HZ 30
 
 #define TICK_DELAY 5
+#define MS_TO_TICKS(x) (x/TICK_DELAY) 
 
 volatile uint8_t buf_idx = 0;
 const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LENGTH/6), 0*(LENGTH/6), 1*(LENGTH/6)};
 doubleBuffer frame_buffer;
 Shell shell;
+SpaceGame space_game;
 
 int hall;
 
 typedef enum {
               POV_SCRATCH_LOOP,
               POV_TEST, 
+              DS4_TEST,
+              SPACE_GAME,
               NUM_POV_STATES
 } pov_state_t;
-pov_state_t exec_state = POV_TEST;
+pov_state_t exec_state = DS4_TEST;
 bool pov_state_change = true;
 void change_state(pov_state_t state)
 {
@@ -53,6 +57,7 @@ void change_state(pov_state_t state)
 }
 void scratch_loop();
 void test_exec();
+void ds4_test();
 
 SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
 
@@ -95,8 +100,17 @@ void main_exec()
       break;
     case POV_TEST:
       //test_exec();
-      textAnimation(&frame_buffer);
+      //textAnimation(&frame_buffer);
+      //pinWheelAnimation_0(&frame_buffer);
+      //vortexAnimation(&frame_buffer);
+      pulseAnimation(&frame_buffer);
       break;
+    case DS4_TEST:
+      ds4_test();
+      break;
+    case SPACE_GAME:
+      space_game.update();
+      space_game.draw(&frame_buffer);
     default:
       break;
   }
@@ -1299,6 +1313,76 @@ void test_exec()
     {
       //SERIAL_PRINTF(SerialUSB, "Offset2 = %d, -1*message_len*8 = %d\n", offset2, -1*message_len*8);
       offset2 = start_offset2;
+    }
+  }
+}
+
+void ds4_test()
+{
+  //static enum {TRIANGE, SQUARE, CROSS, CIRCLE, LBUMP, RBUMP, LSTICK,
+  //             RSTICK, SHARE, OPTIONS, DUP, DLEFT, DDOWN, DRIGHT, DX, DY, NUM_KEYS} ds4_keys_t;
+  static bool buttons[NUM_KEYS] = {0};
+
+  uint8_t num_events = eventBuffer.size();
+  for (int i=0; i<num_events; i++)
+  {
+    Event e;
+    eventBuffer.pop(e);
+    if (e.button_idx >= NUM_KEYS)
+    {
+      continue;
+    }
+    if (e.type == Event::ON_RELEASE && (e.button_idx == DX || e.button_idx == DY))
+    {
+      if (e.button_idx == DX)
+      {
+        buttons[DLEFT] = false;
+        buttons[DRIGHT] = false;
+      }
+      else
+      {
+        buttons[DUP] = false;
+        buttons[DDOWN] = false;
+      }
+      continue;
+    }
+
+    switch(e.type)
+    {
+      case Event::ON_PRESS:
+      {
+        buttons[e.button_idx] = true;
+        break;
+      }
+      case Event::ON_RELEASE:
+      {
+        buttons[e.button_idx] = false;
+        break;
+      }
+      case Event::TAP:
+      {
+        break;
+      }
+      default:
+      {
+        break;
+      }
+    }
+  }
+
+  static const uint8_t N = (2*LENGTH)/(NUM_KEYS-2);
+  static const uint8_t HALF = (NUM_KEYS-2)/2; 
+  for (int i=0; i<NUM_KEYS-2; i++)
+  {
+    if (buttons[i])
+    {
+      uint8_t x1 = (i >= HALF) ? N*(i-HALF) : N*i; 
+      uint8_t x2 = (i >= HALF) ? N*(i+1-HALF) : N*(i+1);
+      uint8_t y1 = (i >= HALF) ? WIDTH/2-1 : 0; 
+      uint8_t y2 = (i >= HALF) ? WIDTH-1 : WIDTH/2;
+      int hue = (i*N*255)/96;
+      CRGB color = CHSV(hue, 255, 255);
+      frame_buffer.drawBlock(x1, y1, 0, x2, y2, HEIGHT-1, color.r, color.g, color.b);
     }
   }
 }

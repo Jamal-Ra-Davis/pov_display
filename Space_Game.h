@@ -4,6 +4,7 @@
 #include "Vector3d.h"
 #include "FrameBuffer.h"
 #include "Events.h"
+#include "Shell.h"
 
 class Bullet
 {
@@ -92,13 +93,14 @@ class Ship
         Bullet bullets[NUM_BULLETS];
         
     public:
-        enum BUTTONS{DUMMY, LEFT, FIRE, RIGHT, UP, DOWN};
+        enum BUTTONS{DUMMY, LEFT=DLEFT, FIRE=SQUARE, RIGHT=DRIGHT, UP=LBUMP, DOWN=RBUMP};
         Ship();
         Ship(Vector3d pos_, Vector3d vel_);
         void reset(Vector3d pos_, Vector3d vel_);
         void update();
         void draw(doubleBuffer *frame_buffer);
         void getSerialData();
+        void handleEvent(Event e);
         bool checkBlockCollision(Vector3d *block);
         
         void setFire(bool b) {fire = b;}
@@ -116,8 +118,6 @@ Ship::Ship()
     right = false;
     up = false;
     down = false;
-
-    
 }
 Ship::Ship(Vector3d pos_, Vector3d vel_)
 {
@@ -295,6 +295,81 @@ void Ship::draw(doubleBuffer *frame_buffer)
     }
   }
 }
+void Ship::handleEvent(Event e)
+{    
+  switch (e.type)
+  {
+    case Event::ON_PRESS:
+    {
+      switch(e.button_idx)
+      {
+        case LEFT:
+        {
+          setLeft(true);
+          break;
+        }
+        case FIRE:
+        {
+          setFire(true);
+          break;
+        }
+        case RIGHT:
+        {
+          setRight(true);
+          break;
+        }
+        case UP:
+        {
+          setUp(true);
+          break;
+        }
+        case DOWN:
+        {
+          setDown(true);
+          break;
+        }
+      }
+      break;
+    }
+    case Event::ON_RELEASE:
+    {
+      switch(e.button_idx)
+      {
+        case LEFT:
+        {
+          setLeft(false);
+          break;
+        }
+        case FIRE:
+        {
+          break;
+        }
+        case RIGHT:
+        {
+          setRight(false);
+          break;
+        }
+        case UP:
+        {
+          setUp(false);
+          break;
+        }
+        case DOWN:
+        {
+          setDown(false);
+          break;
+        }
+        case DX:
+        {
+          setRight(false);
+          setLeft(false);
+          break;
+        }
+      }
+      break;
+    }
+  }
+}
 void Ship::getSerialData()
 {
   while (!eventBuffer.isEmpty())
@@ -395,6 +470,94 @@ bool Ship::checkBlockCollision(Vector3d *block)
   return collide;
 }
 
+class SpaceGame
+{
+  private:
+    Ship ship;
+    Vector3d block[2];
+    bool block_collide;
+    uint8_t hits;
+    uint8_t cnt;
+    bool pause;
+
+    static constexpr int block_color[3] = {70, 100, 70};
+    static const uint8_t delay_cnt = 10;
+    static const uint8_t MAX_HITS = 5;
+    
+  public:
+    SpaceGame();
+    void reset();
+    void update();
+    void draw(doubleBuffer *frame_buffer);
+};
+SpaceGame::SpaceGame()
+{
+  reset();
+}
+void SpaceGame::reset()
+{
+  ship.reset(Vector3d(0, 4, 3), Vector3d(1, 0, 0));
+  block[0].setVector3d(rand()%LENGTH - 1, rand()%WIDTH - 1, rand()%HEIGHT - 1);
+  block[1].setVector3d(block[0].x+1, block[0].y+1, block[0].z+1);
+
+  block_collide = false;
+  hits = MAX_HITS;
+  cnt = 0;
+  pause = false;
+}
+void SpaceGame::update()
+{
+  if (cnt++ % delay_cnt != 0)
+  {
+    return;
+  }
+
+  //Events already loaded into event buffer
+  uint8_t num_events = eventBuffer.size();
+  for (int i=0; i<num_events; i++)
+  {
+    Event e;
+    eventBuffer.pop(e);
+    if (e.type == Event::ON_PRESS && e.button_idx == OPTIONS)
+    {
+      pause = (pause) ? false : true;
+    }
+    if (!pause)
+    {
+      ship.handleEvent(e);
+    }
+  }
+  if (pause)
+  {
+    return;
+  }
+
+  ship.update();
+  block_collide = ship.checkBlockCollision(block);
+  if (block_collide)
+  {
+    hits--;
+    if (hits <= 0)
+    {
+      hits = MAX_HITS;
+      block[0].setVector3d(rand()%(LENGTH - 1), rand()%(WIDTH - 1), rand()%(HEIGHT - 1));
+      block[1].setVector3d(block[0].x+1, block[0].y+1, block[0].z+1);
+      block_collide = false;
+    }
+  }
+}
+void SpaceGame::draw(doubleBuffer *frame_buffer)
+{
+  if (!block_collide)
+  {
+    frame_buffer->drawBlock(block[0], block[1], block_color[RED], block_color[GREEN], block_color[BLUE]);
+  }
+  else
+  {
+    frame_buffer->drawBlock(block[0], block[1], 255, 0, 0);
+  }
+  ship.draw(frame_buffer);
+}
 
 //void getSerialData(Ship *ship);
 void ship_loop(doubleBuffer *frame_buffer)

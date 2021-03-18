@@ -147,7 +147,6 @@ def notification_handler(sender, data):
 def message_helper(send_msg_id, send_payload, resp_msg_id):
     out_msg = getMessage(send_msg_id, send_payload)
     parent_conn.send(out_msg)
-    response_id = resp_msg_id
 
     resp = msg_queue_dict[resp_msg_id].get(timeout=TIMEOUT_PERIOD)
     (payload_size, msg_id) = getMessageHeader(resp)
@@ -168,23 +167,35 @@ def message_helper(send_msg_id, send_payload, resp_msg_id):
     return payload
 
 
-def button_event(event, button_idx):
+def button_event(event, button_idx, resp):
     if (not str(event).isdigit()):
         return -1
     if (not str(button_idx).isdigit()):
         return -1
-    payload = struct.pack('i i', event, button_idx)
+    if (resp == True):
+        resp = 1
+    else:
+        resp = 0
+    payload = struct.pack('i i i', event, button_idx, resp)
 
-    #Setup message
+    #Setup message that doesn't expect response
+    if (resp == 0):
+        out_msg = getMessage(BUTTON_EVENT, payload)
+        parent_conn.send(out_msg)
+        return 0
+
+    #Setup message that expect response
     response_id = ACK
     try:
         payload = message_helper(BUTTON_EVENT, payload, response_id)
         if (payload is None):
-            return
+            return -1
         print("Successfully sent button event")
         msg_queue_dict[response_id].task_done()
+        return 0
     except queue.Empty as e:
             print("Error: Timed out waiting for response")
+            return -1
 
 class POV_Shell(cmd.Cmd):
     #intro = 'POV Shell: Have fun'
@@ -340,17 +351,20 @@ Type help or ? to list commands
                 event = 2
             else:
                 raise Exception("Invalid button event: {}".format(arg[1]))
-            payload = struct.pack('i i', event, button_idx)
+            #payload = struct.pack('i i', event, button_idx)
 
             #Setup message
-            response_id = ACK
-            payload = message_helper(BUTTON_EVENT, payload, response_id)
-            if (payload is None):
-                return
-            print("Successfully sent button event")
-            msg_queue_dict[response_id].task_done()
-        except queue.Empty as e:
-            print("Error: Timed out waiting for response")
+            #response_id = ACK
+            #payload = message_helper(BUTTON_EVENT, payload, response_id)
+            #if (payload is None):
+            #    return
+            #print("Successfully sent button event")
+            #msg_queue_dict[response_id].task_done()
+            
+        #except queue.Empty as e:
+        #    print("Error: Timed out waiting for response")
+            if (button_event(event, button_idx, True) != 0):
+                print("Error sending button event")
         except BaseException:
             print("Error:", sys.exc_info())
 

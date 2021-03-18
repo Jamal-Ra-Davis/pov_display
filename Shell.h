@@ -35,9 +35,15 @@ struct message_header;
 #define GET_REGISTER_RESP       6
 #define GET_RTC_TIME_RESP       7
 
-
 #define MAX_BUF_SZ 64
 #define MAX_PAYLOAD (MAX_BUF_SZ-8)
+
+enum {
+      TRIANGE, SQUARE, CROSS, CIRCLE, 
+      LBUMP, RBUMP, LSTICK, RSTICK, 
+      SHARE, OPTIONS, DUP, DLEFT, 
+      DDOWN, DRIGHT, DX, DY, NUM_KEYS
+} ds4_keys_t;
 
 extern char log_line_buf[MAX_PAYLOAD];
 char log_line_buf[MAX_PAYLOAD];
@@ -177,6 +183,7 @@ int Shell::read_ringbuf(uint8_t* dst, size_t N)
 struct button_event_data {
   uint32_t type;
   uint32_t btn_idx;
+  uint32_t resp_req;
 };
 int Shell::execute_command(struct message *msg)
 {
@@ -334,11 +341,14 @@ int Shell::execute_command(struct message *msg)
       }
 
       eventBuffer.push(Event((Event::EVENT)(data->type), data->btn_idx));
-      ret = send_data(ACK, NULL, 0);
-      if (ret != 0)
+      if (data->resp_req)
       {
-        SerialUSB.println("Error: Failed to ACK BUTTON_EVENT");
-        break;
+        ret = send_data(ACK, NULL, 0);
+        if (ret != 0)
+        {
+          SerialUSB.println("Error: Failed to ACK BUTTON_EVENT");
+          break;
+        }
       }
       char buf[MAX_BUF_SZ];
       snprintf(buf, MAX_BUF_SZ, "Button Event. Button Idx: %d, Status: %d", data->btn_idx, data->type);
