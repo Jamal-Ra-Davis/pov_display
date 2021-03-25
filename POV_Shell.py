@@ -176,6 +176,7 @@ def button_event(event, button_idx, resp):
         resp = 1
     else:
         resp = 0
+
     payload = struct.pack('i i i', event, button_idx, resp)
 
     #Setup message that doesn't expect response
@@ -351,18 +352,7 @@ Type help or ? to list commands
                 event = 2
             else:
                 raise Exception("Invalid button event: {}".format(arg[1]))
-            #payload = struct.pack('i i', event, button_idx)
 
-            #Setup message
-            #response_id = ACK
-            #payload = message_helper(BUTTON_EVENT, payload, response_id)
-            #if (payload is None):
-            #    return
-            #print("Successfully sent button event")
-            #msg_queue_dict[response_id].task_done()
-            
-        #except queue.Empty as e:
-        #    print("Error: Timed out waiting for response")
             if (button_event(event, button_idx, True) != 0):
                 print("Error sending button event")
         except BaseException:
@@ -451,7 +441,17 @@ async def run_notification_and_name(address, loop, child_conn):
                             LOGGING_ENABLED = False
                         else:
                             data = bytearray(data)
-                            await client.write_gatt_char(WRITE_UUID, data)
+                            data_len = len(data)
+                            print("Data Size:", data_len)
+
+                            while(1):
+                                if (len(data) <= 20):
+                                    await client.write_gatt_char(WRITE_UUID, data)
+                                    break
+                                else:
+                                    send_data = data[:20]
+                                    data = data[20:]
+                                    await client.write_gatt_char(WRITE_UUID, send_data)
                     await asyncio.sleep(0.001)
 
                 await client.stop_notify(WRITE_UUID)
@@ -459,6 +459,8 @@ async def run_notification_and_name(address, loop, child_conn):
             print("Retrying connection...")
             connect_attempts -= 1
             await asyncio.sleep(0.100)
+        except BaseException:
+            print("Error:", sys.exc_info())
     if (connect_attempts == 0):
         print("Failed to connect...")
 
@@ -560,7 +562,7 @@ def gamepad_handler():
                     if (pad_event != ""):
                         print(pad_event)
                     if (btn_event != -1 and btn_key != -1):
-                        button_event(btn_event, btn_key)
+                        button_event(btn_event, btn_key, False)
         except:
             print("Error: Gamepad not found...")
             connect_attempts -= 1
