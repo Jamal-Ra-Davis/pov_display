@@ -216,20 +216,14 @@ void doubleBuffer::drawBlock(int x0, int y0, int z0, int x1, int y1, int z1, uin
     return;
   for (int i=x0; i <= x1; i++)
   {
-    SerialUSB.print("i: ");
-    SerialUSB.println(i);
     if (i < 0 || i >= LENGTH)
       continue;
     for (int j=y0; j <= y1; j++)
     {
-      SerialUSB.print("j: ");
-      SerialUSB.println(j);
       if (j < 0 || j >= WIDTH)
         continue;
       for (int k=z0; k <= z1; k++)
       {
-        SerialUSB.print("k: ");
-        SerialUSB.println(k);
         if (k < 0 || k >= HEIGHT)
           continue;
         setColors(i, j, k, r, g, b);
