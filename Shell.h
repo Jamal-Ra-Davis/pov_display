@@ -6,10 +6,12 @@
 #include "RingBuf.h"
 #include "FrameBuffer.h"
 #include "Events.h"
+#include "MessageStructs.h"
 #include <string.h>
 
 struct message_header;
 
+//TODO: Refactor message id #defines as enums
 //Incoming Messages
 #define GET_DISPLAY_SIZE        0
 #define GET_BUFFER_TYPE         1
@@ -22,8 +24,10 @@ struct message_header;
 #define SET_REGISTER            8
 #define SET_MARQUEE_TEXT        9
 #define USE_MARQEE              10
-#define SET_RTC_TIME            11
-#define GET_RTC_TIME            12
+#define GET_RTC_TIME            11
+#define SET_RTC_TIME            12
+#define GET_EXEC_STATE          13
+#define SET_EXEC_STATE          14
 
 //Outgoing Messages
 #define ACK                     0
@@ -34,16 +38,28 @@ struct message_header;
 #define LOG_MSG                 5
 #define GET_REGISTER_RESP       6
 #define GET_RTC_TIME_RESP       7
+#define GET_EXEC_STATE_RESP     8
 
 #define MAX_BUF_SZ 64
 #define MAX_PAYLOAD (MAX_BUF_SZ-8)
 
-enum {
+typedef enum {
       TRIANGE, SQUARE, CROSS, CIRCLE, 
       LBUMP, RBUMP, LSTICK, RSTICK, 
       SHARE, OPTIONS, DUP, DLEFT, 
       DDOWN, DRIGHT, DX, DY, NUM_KEYS
 } ds4_keys_t;
+
+typedef enum {
+              POV_SCRATCH_LOOP,
+              POV_TEST, 
+              DS4_TEST,
+              SPACE_GAME,
+              NUM_POV_STATES
+} pov_state_t;
+
+extern int change_state(pov_state_t state);
+extern pov_state_t exec_state;
 
 extern char log_line_buf[MAX_PAYLOAD];
 char log_line_buf[MAX_PAYLOAD];
@@ -64,15 +80,11 @@ char serial_line_buf[MAX_BUF_SZ];
 extern doubleBuffer frame_buffer;
 extern long timer_delta;
 
+//Temp RTC variables
+static uint32_t hours = 0;
+static uint32_t mins = 0;
+static uint32_t secs = 0;
 
-struct message_header {
-  uint32_t payload_size;
-  uint32_t msg_id;
-};
-struct message {
-  struct message_header hdr;
-  uint8_t payload[0];
-};
 
 class Shell {
   private:
@@ -180,11 +192,7 @@ int Shell::read_ringbuf(uint8_t* dst, size_t N)
 }
 
 
-struct button_event_data {
-  uint32_t type;
-  uint32_t btn_idx;
-  uint32_t resp_req;
-};
+
 int Shell::execute_command(struct message *msg)
 {
   int ret;
@@ -200,11 +208,6 @@ int Shell::execute_command(struct message *msg)
   {
     case GET_DISPLAY_SIZE:
     {
-      struct display_size {
-        uint32_t length;
-        uint32_t width;
-        uint32_t height;
-      };
       struct display_size disp_sz = {
         .length = LENGTH,
         .width = WIDTH,
@@ -353,6 +356,149 @@ int Shell::execute_command(struct message *msg)
       char buf[MAX_BUF_SZ];
       snprintf(buf, MAX_BUF_SZ, "Button Event. Button Idx: %d, Status: %d", data->btn_idx, data->type);
       SerialUSB.println(buf);
+      msg_handled = true;
+      break;
+    }
+
+    case GET_REGISTER:
+    {
+      if (msg->hdr.payload_size < sizeof(uint32_t))
+      {
+        SerialUSB.println("Error: Failed to execute GET_REGISTER");
+        break;
+      }
+      uint32_t *addr_ = (uint32_t*)msg->payload;
+      uint32_t addr = (*addr_);
+      uint32_t reg_val = *((uint32_t*)addr);
+
+      ret = send_data(GET_REGISTER_RESP, (uint8_t*)&reg_val, sizeof(uint32_t));
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK GET_REGISTER");
+        break;
+      }
+    
+      SERIAL_PRINTF(SerialUSB, "Reg[%04X]: %04X\n", addr, reg_val);
+      msg_handled = true;
+      break;
+    }
+
+    case SET_REGISTER:
+    {
+      if (msg->hdr.payload_size < sizeof(struct set_register))
+      {
+        SerialUSB.println("Error: Failed to execute SET_REGISTER");
+        break;
+      }
+
+      struct set_register *set_reg = (struct set_register*)msg->payload;
+      //Hold off until you know data is coming through correctly
+      //*((uint32_t*)set_reg->addr) = set_reg->value;
+
+      ret = send_data(ACK, NULL, 0);
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK SET_REGISTER");
+        break;
+      }
+    
+      SERIAL_PRINTF(SerialUSB, "Reg[%04X]: %04X\n", set_reg->addr, set_reg->value);
+      msg_handled = true;
+      break;
+      
+    }
+
+    case SET_MARQUEE_TEXT:
+    {
+      break;
+    }
+
+    case USE_MARQEE:
+    {
+      break;
+    }
+
+    case GET_RTC_TIME:
+    {
+      struct rtc_time rtc_time = {
+        .hours = hours,
+        .mins = mins,
+        .secs = secs,
+      };
+
+      ret = send_data(GET_RTC_TIME_RESP, (uint8_t*)&rtc_time, sizeof(struct rtc_time));
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK GET_RTC_TIME");
+        break;
+      }
+
+      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", hours, mins, secs);
+      msg_handled = true;
+      break;
+    }
+
+    case SET_RTC_TIME:
+    {
+      if (msg->hdr.payload_size < sizeof(struct rtc_time))
+      {
+        break;
+      }
+      struct rtc_time *rtc_time = (struct rtc_time*)msg->payload;
+      hours = rtc_time->hours;
+      mins = rtc_time->mins;
+      secs = rtc_time->secs;
+      
+      ret = send_data(ACK, NULL, 0);
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK SET_RTC_TIME");
+        break;
+      }
+      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", hours, mins, secs);
+      msg_handled = true;
+      break;
+    }
+
+    case GET_EXEC_STATE:
+    {
+      uint32_t state = (uint32_t)exec_state;
+
+      ret = send_data(GET_EXEC_STATE_RESP, (uint8_t*)&state, sizeof(uint32_t));
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK GET_EXEC_STATE");
+        break;
+      }
+      
+      SERIAL_PRINTF(SerialUSB, "Current state: %d\n", state);
+      msg_handled = true;
+      break;
+    }
+
+    case SET_EXEC_STATE:
+    {
+      if (msg->hdr.payload_size < sizeof(uint32_t))
+      {
+        SerialUSB.println("Error: Failed to execute SET_EXEC_STATE");
+        break;
+      }
+      uint32_t *state = (uint32_t*)msg->payload;
+      ret = change_state((pov_state_t)(*state));
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Error occured while changing state");
+        break;
+      }
+
+      ret = send_data(ACK, NULL, 0);
+      if (ret != 0)
+      {
+        SerialUSB.println("Error: Failed to ACK SET_EXEC_STATE");
+        break;
+      }
+    
+      SERIAL_PRINTF(SerialUSB, "Updated state: %d\n", (*state));
       msg_handled = true;
       break;
     }

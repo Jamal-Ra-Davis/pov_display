@@ -38,22 +38,17 @@ SpaceGame space_game;
 
 int hall;
 
-typedef enum {
-              POV_SCRATCH_LOOP,
-              POV_TEST, 
-              DS4_TEST,
-              SPACE_GAME,
-              NUM_POV_STATES
-} pov_state_t;
-pov_state_t exec_state = DS4_TEST;
+
+pov_state_t exec_state = POV_TEST;
 bool pov_state_change = true;
-void change_state(pov_state_t state)
+int change_state(pov_state_t state)
 {
   if (exec_state != state)
   {
     exec_state = state;
     pov_state_change = true;
   }
+  return 0;
 }
 void scratch_loop();
 void test_exec();
@@ -99,11 +94,11 @@ void main_exec()
       scratch_loop();
       break;
     case POV_TEST:
-      //test_exec();
+      test_exec();
       //textAnimation(&frame_buffer);
       //pinWheelAnimation_0(&frame_buffer);
       //vortexAnimation(&frame_buffer);
-      pulseAnimation(&frame_buffer);
+      //pulseAnimation(&frame_buffer);
       break;
     case DS4_TEST:
       ds4_test();
