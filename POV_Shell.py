@@ -37,8 +37,8 @@ GET_REGISTER_RESP =      6
 GET_RTC_TIME_RESP =      7
 GET_EXEC_STATE_RESP =    8
 
-MSG_CMD_NUM = 11
-RESP_CMD_NUM = 7
+MSG_CMD_NUM = 15
+RESP_CMD_NUM = 9
 
 #Button events
 BTN_PRESS = 0
@@ -376,8 +376,8 @@ Type help or ? to list commands
             payload = message_helper(GET_REGISTER, payload, response_id)
             if (payload is None):
                 return
-            (reg_val) = struct.unpack('i', payload) 
-            print("Reg[%04X]: %04X"%(addr, reg_val))      
+            (reg_val,) = struct.unpack('i', payload) 
+            print("Reg[%08X]: %08X"%(addr, reg_val))      
             msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
@@ -397,7 +397,7 @@ Type help or ? to list commands
             payload = message_helper(SET_REGISTER, payload, response_id)
             if (payload is None):
                 return
-            print("Reg[%04X] updated successfully")      
+            print("Reg[%08X] updated to %08X successfully"%(addr, reg_val))      
             msg_queue_dict[response_id].task_done()
         except queue.Empty as e:
             print("Error: Timed out waiting for response")
@@ -427,8 +427,8 @@ Type help or ? to list commands
         'Set RTC time on display to current time'
         try:
             time = str(datetime.now().time())
-            time = time.split()
-            hours =   int(time[0])
+            time = time.split(":")
+            hours = int(time[0])
             mins = int(time[1])
             secs = int(float(time[2]))
 
@@ -453,7 +453,7 @@ Type help or ? to list commands
             payload = message_helper(GET_EXEC_STATE, None, response_id)
             if (payload is None):
                 return
-            (state) = struct.unpack('i', payload) 
+            (state,) = struct.unpack('i', payload) 
             print("Exec state = %s(%d)"%(state_map[state], state))      
             msg_queue_dict[response_id].task_done()
         except queue.Empty as e:

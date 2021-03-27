@@ -378,7 +378,7 @@ int Shell::execute_command(struct message *msg)
         break;
       }
     
-      SERIAL_PRINTF(SerialUSB, "Reg[%04X]: %04X\n", addr, reg_val);
+      SERIAL_PRINTF(SerialUSB, "Reg[%08X]: %08X\n", addr, reg_val);
       msg_handled = true;
       break;
     }
@@ -392,8 +392,7 @@ int Shell::execute_command(struct message *msg)
       }
 
       struct set_register *set_reg = (struct set_register*)msg->payload;
-      //Hold off until you know data is coming through correctly
-      //*((uint32_t*)set_reg->addr) = set_reg->value;
+      *((uint32_t*)set_reg->addr) = set_reg->value;
 
       ret = send_data(ACK, NULL, 0);
       if (ret != 0)
@@ -402,7 +401,7 @@ int Shell::execute_command(struct message *msg)
         break;
       }
     
-      SERIAL_PRINTF(SerialUSB, "Reg[%04X]: %04X\n", set_reg->addr, set_reg->value);
+      SERIAL_PRINTF(SerialUSB, "Reg[%08X]: %08X\n", set_reg->addr, set_reg->value);
       msg_handled = true;
       break;
       
