@@ -7,7 +7,7 @@ import time
 import logging
 import multiprocessing
 from inputs import get_gamepad
-
+from datetime import datetime
 
 #Message Commands
 GET_DISPLAY_SIZE =        0
@@ -21,6 +21,10 @@ GET_REGISTER =            7
 SET_REGISTER =            8
 SET_MARQUEE_TEXT =        9
 USE_MARQEE =              10
+GET_RTC_TIME =            11
+SET_RTC_TIME =            12
+GET_EXEC_STATE =          13
+SET_EXEC_STATE =          14
 
 #Message Responses
 ACK =                    0
@@ -30,6 +34,8 @@ GET_BUFFER_TYPE_RESP =   3
 GET_PERIOD_RESP =        4
 LOG_MSG =                5
 GET_REGISTER_RESP =      6
+GET_RTC_TIME_RESP =      7
+GET_EXEC_STATE_RESP =    8
 
 MSG_CMD_NUM = 11
 RESP_CMD_NUM = 7
@@ -355,6 +361,124 @@ Type help or ? to list commands
 
             if (button_event(event, button_idx, True) != 0):
                 print("Error sending button event")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_get_register(self, arg):
+        'Returns specified register value: get_register <reg_addr>'
+        try:
+            #Parse Args
+            arg = arg.split()
+            addr = int(arg[0], 16)
+            payload = struct.pack('i', addr)
+
+            response_id = GET_REGISTER_RESP
+            payload = message_helper(GET_REGISTER, payload, response_id)
+            if (payload is None):
+                return
+            (reg_val) = struct.unpack('i', payload) 
+            print("Reg[%04X]: %04X"%(addr, reg_val))      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+        except BaseException:
+            print("Error:", sys.exc_info())
+    
+    def do_set_register(self, arg):
+        'Sets specified register value: set_register <reg_addr> <reg_val>'
+        try:
+            #Parse Args
+            arg = arg.split()
+            addr = int(arg[0], 16)
+            reg_val = int(arg[1], 16)
+            payload = struct.pack('i i', addr, reg_val)
+
+            response_id = ACK
+            payload = message_helper(SET_REGISTER, payload, response_id)
+            if (payload is None):
+                return
+            print("Reg[%04X] updated successfully")      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    #do_set_marqee_text
+
+    #use_marquee
+
+    def do_get_rtc_time(self, arg):
+        'Returns RTC time on display'
+        try:
+            response_id = GET_RTC_TIME_RESP
+            payload = message_helper(GET_RTC_TIME, None, response_id)
+            if (payload is None):
+                return
+            (h, m, s) = struct.unpack('i i i', payload) 
+            print("RTC time = (%02d:%02d:%02d)"%(h, m, s))      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_set_rtc_time(self, arg):
+        'Set RTC time on display to current time'
+        try:
+            time = str(datetime.now().time())
+            time = time.split()
+            hours =   int(time[0])
+            mins = int(time[1])
+            secs = int(float(time[2]))
+
+            payload = struct.pack('i i i', hours, mins, secs)
+
+            response_id = ACK
+            payload = message_helper(SET_RTC_TIME, payload, response_id)
+            if (payload is None):
+                return
+            print("Successfully set RTC time = (%02d:%02d:%02d)"%(hours, mins, secs))      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_get_exec_state(self, arg):
+        'Returns current execution state of the display'
+        try:
+            state_map = ["POV_SCRATCH_LOOP", "POV_TEST", "DS4_TEST", "SPACE_GAME"]
+            response_id = GET_EXEC_STATE_RESP
+            payload = message_helper(GET_EXEC_STATE, None, response_id)
+            if (payload is None):
+                return
+            (state) = struct.unpack('i', payload) 
+            print("Exec state = %s(%d)"%(state_map[state], state))      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_set_exec_state(self, arg):
+        'Sets current execution state of the display: set_execution_state <state>'
+        try:
+            #Parse Args
+            arg = arg.split()
+            if (not str(arg[0]).isdigit()):
+                raise Exception("Invalid button index: {}".format(arg[0]))
+            state = int(arg[0])
+            payload = struct.pack('i', state)
+
+            response_id = ACK
+            payload = message_helper(SET_EXEC_STATE, payload, response_id)
+            if (payload is None):
+                return
+            print("Successfully set execution state: %d"%(state))      
+            msg_queue_dict[response_id].task_done()
+        except queue.Empty as e:
+            print("Error: Timed out waiting for response")
         except BaseException:
             print("Error:", sys.exc_info())
 
