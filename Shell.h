@@ -8,6 +8,7 @@
 #include "Events.h"
 #include "MessageStructs.h"
 #include <string.h>
+#include <RTCZero.h>
 
 struct message_header;
 
@@ -60,6 +61,7 @@ typedef enum {
 
 extern int change_state(pov_state_t state);
 extern pov_state_t exec_state;
+extern RTCZero rtc;
 
 extern char log_line_buf[MAX_PAYLOAD];
 char log_line_buf[MAX_PAYLOAD];
@@ -79,12 +81,6 @@ char serial_line_buf[MAX_BUF_SZ];
 
 extern doubleBuffer frame_buffer;
 extern long timer_delta;
-
-//Temp RTC variables
-static uint32_t hours = 0;
-static uint32_t mins = 0;
-static uint32_t secs = 0;
-
 
 class Shell {
   private:
@@ -420,9 +416,9 @@ int Shell::execute_command(struct message *msg)
     case GET_RTC_TIME:
     {
       struct rtc_time rtc_time = {
-        .hours = hours,
-        .mins = mins,
-        .secs = secs,
+        .hours = rtc.getHours(),
+        .mins = rtc.getMinutes(),
+        .secs = rtc.getSeconds(),
       };
 
       ret = send_data(GET_RTC_TIME_RESP, (uint8_t*)&rtc_time, sizeof(struct rtc_time));
@@ -432,7 +428,7 @@ int Shell::execute_command(struct message *msg)
         break;
       }
 
-      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", hours, mins, secs);
+      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", rtc_time.hours, rtc_time.mins, rtc_time.secs);
       msg_handled = true;
       break;
     }
@@ -444,17 +440,16 @@ int Shell::execute_command(struct message *msg)
         break;
       }
       struct rtc_time *rtc_time = (struct rtc_time*)msg->payload;
-      hours = rtc_time->hours;
-      mins = rtc_time->mins;
-      secs = rtc_time->secs;
-      
+
+      rtc.setTime(rtc_time->hours, rtc_time->mins, rtc_time->secs);
+
       ret = send_data(ACK, NULL, 0);
       if (ret != 0)
       {
         SerialUSB.println("Error: Failed to ACK SET_RTC_TIME");
         break;
       }
-      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", hours, mins, secs);
+      SERIAL_PRINTF(SerialUSB, "RTC Time = (%02d:%02d:%02d)\n", rtc_time->hours, rtc_time->mins, rtc_time->secs);
       msg_handled = true;
       break;
     }

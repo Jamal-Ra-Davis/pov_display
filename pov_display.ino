@@ -12,6 +12,7 @@
 #include "Snake.h"
 #include "DMA_SPI.h"
 #include "Shell.h"
+#include <RTCZero.h>
 
 #define LED_PIN 9
 #define HALL_PIN 6
@@ -35,9 +36,9 @@ const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LEN
 doubleBuffer frame_buffer;
 Shell shell;
 SpaceGame space_game;
+RTCZero rtc;
 
 int hall;
-
 
 pov_state_t exec_state = POV_TEST;
 bool pov_state_change = true;
@@ -154,6 +155,7 @@ void setup()
   mySPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
   hallEffectSetup();
   startTimer(REFRESH_HZ*LENGTH);
+  rtc.begin();
   frame_buffer.reset();
   delay(3000);
 
