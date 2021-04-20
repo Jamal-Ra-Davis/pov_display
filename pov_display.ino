@@ -40,7 +40,7 @@ RTCZero rtc;
 
 int hall;
 
-pov_state_t exec_state = POV_TEST;
+pov_state_t exec_state = CLOCK_DISPLAY;
 bool pov_state_change = true;
 int change_state(pov_state_t state)
 {
@@ -54,6 +54,7 @@ int change_state(pov_state_t state)
 void scratch_loop();
 void test_exec();
 void ds4_test();
+void clock_test();
 
 SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
 
@@ -107,6 +108,10 @@ void main_exec()
     case SPACE_GAME:
       space_game.update();
       space_game.draw(&frame_buffer);
+      break;
+    case CLOCK_DISPLAY:
+      clock_test();
+      break;
     default:
       break;
   }
@@ -1381,5 +1386,83 @@ void ds4_test()
       CRGB color = CHSV(hue, 255, 255);
       frame_buffer.drawBlock(x1, y1, 0, x2, y2, HEIGHT-1, color.r, color.g, color.b);
     }
+  }
+}
+
+void clock_test()
+{
+  //Clock
+  int sec = rtc.getSeconds();
+  int min = rtc.getMinutes();
+  int hour = rtc.getHours() % 12;
+  static int h_off = 0;
+  static int h_up = 1;
+  static int h_inc = 0;
+
+  static const uint8_t delay_cnt = 5;
+  static uint8_t cnt = 0;
+  
+  //Draw back plane
+  for (int i=0; i<LENGTH; i++)
+  {
+    frame_buffer.setColors(i, WIDTH-1, h_off, 255, 255, 255);
+    if (i % (LENGTH/12) == 0)
+    {
+      frame_buffer.setColors(i, WIDTH-2, h_off, 255, 255, 255);
+      frame_buffer.setColors(i, WIDTH-3, h_off, 255, 255, 255);
+    }
+  }
+
+  //Draw Hands
+  for (int j=0; j<WIDTH; j++)
+  {
+    //Draw sec hand
+    int sec_idx = (sec*LENGTH)/60;
+    if (j <= WIDTH-3)
+    {
+      frame_buffer.setColors(sec_idx, j, 1+h_off, 0, 0, 255);
+    }
+
+    //Draw min hand
+    int min_idx = (min*LENGTH)/60;
+    if (j <= WIDTH-3)
+    {
+      frame_buffer.setColors(min_idx, j, 2+h_off, 0, 255, 0);
+    }
+
+    //Draw hour hand
+    int hour_idx = (hour*LENGTH)/12;
+    if (j <= WIDTH-5)
+    {
+      frame_buffer.setColors(hour_idx, j, 3+h_off, 255, 0, 0);
+    }
+  }
+
+  //Update logic
+  if (cnt++ % delay_cnt == 0)
+  {
+    h_inc++;
+    if ((h_inc % 77) == 0)
+    {
+      if (h_up)
+      {
+        h_off++;
+        if (h_off > 2)
+        {
+          h_off = 2;
+          h_up = 0;
+        }
+      }
+      else
+      {
+        h_off--;
+        if (h_off < 0)
+        {
+          h_off = 0;
+          h_up = 1;
+        }
+      }
+    }
+    SERIAL_PRINTF(SerialUSB, "%02d:%02d:%02d\n", hour, min, sec);
   }
 }

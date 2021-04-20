@@ -56,6 +56,7 @@ typedef enum {
               POV_TEST, 
               DS4_TEST,
               SPACE_GAME,
+              CLOCK_DISPLAY,
               NUM_POV_STATES
 } pov_state_t;
 
