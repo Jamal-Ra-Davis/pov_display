@@ -1099,7 +1099,7 @@ int MazeGame::handleInputs()
     {
       case Event::ON_PRESS:
       {
-        switch (e.button_idx)
+        switch (e.data.button_idx)
         {
           case LEFT:
           {
@@ -1146,7 +1146,7 @@ int MazeGame::handleInputs()
       }
       case Event::ON_RELEASE:
       {
-        switch (e.button_idx)
+        switch (e.data.button_idx)
         {
           case LEFT:
           {

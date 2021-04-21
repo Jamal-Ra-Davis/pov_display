@@ -54,6 +54,7 @@ int change_state(pov_state_t state)
 void scratch_loop();
 void test_exec();
 void ds4_test();
+void ds4_analog_test();
 void clock_test();
 
 SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
@@ -103,7 +104,8 @@ void main_exec()
       //pulseAnimation(&frame_buffer);
       break;
     case DS4_TEST:
-      ds4_test();
+      //ds4_test();
+      ds4_analog_test();
       break;
     case SPACE_GAME:
       space_game.update();
@@ -1330,13 +1332,13 @@ void ds4_test()
   {
     Event e;
     eventBuffer.pop(e);
-    if (e.button_idx >= NUM_KEYS)
+    if (e.type >= Event::NUM_BTN_EVENTS || e.data.button_idx >= NUM_KEYS)
     {
       continue;
     }
-    if (e.type == Event::ON_RELEASE && (e.button_idx == DX || e.button_idx == DY))
+    if (e.type == Event::ON_RELEASE && (e.data.button_idx == DX || e.data.button_idx == DY))
     {
-      if (e.button_idx == DX)
+      if (e.data.button_idx == DX)
       {
         buttons[DLEFT] = false;
         buttons[DRIGHT] = false;
@@ -1353,12 +1355,12 @@ void ds4_test()
     {
       case Event::ON_PRESS:
       {
-        buttons[e.button_idx] = true;
+        buttons[e.data.button_idx] = true;
         break;
       }
       case Event::ON_RELEASE:
       {
-        buttons[e.button_idx] = false;
+        buttons[e.data.button_idx] = false;
         break;
       }
       case Event::TAP:
@@ -1465,4 +1467,79 @@ void clock_test()
     }
     SERIAL_PRINTF(SerialUSB, "%02d:%02d:%02d\n", hour, min, sec);
   }
+}
+
+void ds4_analog_test()
+{
+  static int32_t lstick_x = 0;
+  static int32_t lstick_y = 0;
+
+  static int32_t rstick_x = 0;
+  static int32_t rstick_y = 0;
+
+  static uint8_t l_trig = 0;
+  static uint8_t r_trig = 0;
+
+  uint8_t num_events = eventBuffer.size();
+  for (int i=0; i<num_events; i++)
+  {
+    Event e;
+    eventBuffer.pop(e);
+    if (e.type != Event::ABS_VAL)
+    {
+      continue;
+    }
+
+    switch(e.data.abs_data.type)
+    {
+      case Event::L_STICK:
+      {
+        lstick_x = e.data.abs_data.x;
+        lstick_y = e.data.abs_data.y;
+        break;
+      }
+      case Event::R_STICK:
+      {
+        rstick_x = e.data.abs_data.x;
+        rstick_y = e.data.abs_data.y;
+        break;
+      }
+      case Event::L_TRIG:
+      {
+        l_trig = e.data.abs_data.trigger;
+        break;
+      }
+      case Event::R_TRIG:
+      {
+        r_trig = e.data.abs_data.trigger;
+        break;
+      }
+      default:
+      {
+        break;
+      }
+    }
+  }
+
+
+  int16_t norm_lstick_x = (100*lstick_x)/0xEFFF;
+  int16_t norm_lstick_y = (100*lstick_y)/0xEFFF;
+  //int16_t norm_rstick_x = (100*rstick_x)/0xEFFF;
+  //int16_t norm_rstick_y = (100*rstick_y)/0xEFFF;
+
+  int16_t l_mag = sqrt(norm_lstick_x*norm_lstick_x + norm_lstick_y*norm_lstick_y);
+  //int16_t r_mag = sqrt(norm_rstick_x*norm_rstick_x + norm_rstick_y*norm_rstick_y);
+
+  uint16_t norm_l_trig = ((LENGTH-1)*l_trig)/255;
+  uint16_t norm_r_trig = ((LENGTH-1)*r_trig)/255;
+
+
+  frame_buffer.drawBlock(0, 0, HEIGHT-1, norm_l_trig, 3, HEIGHT-1, 255, 0, 255);
+  frame_buffer.drawBlock(0, 4, HEIGHT-1, norm_r_trig, 7, HEIGHT-1, 255, 255, 0);
+
+  if (l_mag > 30)
+  {
+
+  }
+
 }

@@ -362,7 +362,11 @@ void Snake::draw(doubleBuffer *frame_buffer)
 
 int Snake::handleOnPress(Event e, int dir_)
 {
-  switch(e.button_idx)
+  if (e.type >= Event::NUM_BTN_EVENTS)
+  {
+    return -1;
+  }
+  switch(e.data.button_idx)
   {
     case 1://left (CCW)
     {
@@ -440,13 +444,13 @@ int Snake::handleOnPress(Event e, int dir_)
   }
 
   /*
-  if (e.button_idx == 0)
+  if (e.data.button_idx == 0)
   {
     dir = dir_-1;
     if (dir < 0)
       dir = NUM_DIR - 1;
   }
-  else if (e.button_idx == 1)
+  else if (e.data.button_idx == 1)
   {
     dir = dir_ + 1;
     if (dir >= NUM_DIR)

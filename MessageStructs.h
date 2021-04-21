@@ -29,6 +29,16 @@ struct rtc_time {
   uint32_t mins;
   uint32_t secs;
 };
-
+struct joystick_event_data {
+  uint32_t type;
+  int32_t x;
+  int32_t y;
+  int32_t resp_req;
+};
+struct trigger_event_data {
+  uint32_t type;
+  uint32_t trigger;
+  uint32_t resp_req;
+};
 
 #endif

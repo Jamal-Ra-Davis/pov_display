@@ -1,4 +1,3 @@
-
 #ifndef SHELL_LIB_
 #define SHELL_LIB_
 
@@ -29,6 +28,8 @@ struct message_header;
 #define SET_RTC_TIME            12
 #define GET_EXEC_STATE          13
 #define SET_EXEC_STATE          14
+#define JOYSTICK_EVENT          15
+#define TRIGGER_EVENT           16
 
 //Outgoing Messages
 #define ACK                     0
@@ -351,7 +352,7 @@ int Shell::execute_command(struct message *msg)
         }
       }
       char buf[MAX_BUF_SZ];
-      snprintf(buf, MAX_BUF_SZ, "Button Event. Button Idx: %d, Status: %d", data->btn_idx, data->type);
+      snprintf(buf, MAX_BUF_SZ, "Button Event. Button Idx: %d, Button Type: %d", data->btn_idx, data->type);
       SerialUSB.println(buf);
       msg_handled = true;
       break;
@@ -494,6 +495,70 @@ int Shell::execute_command(struct message *msg)
       }
     
       SERIAL_PRINTF(SerialUSB, "Updated state: %d\n", (*state));
+      msg_handled = true;
+      break;
+    }
+
+    case JOYSTICK_EVENT:
+    {
+      
+      if (msg->hdr.payload_size < sizeof(struct joystick_event_data))
+      {
+        SerialUSB.println("Error: Failed to execute JOYSTICK_EVENT");
+        break;
+      }
+      struct joystick_event_data *data = (struct joystick_event_data*)msg->payload;
+      if (data->type != Event::L_STICK && data->type != Event::R_STICK)
+      {
+        SerialUSB.println("Error: Failed to execute JOYSTICK_EVENT");
+        break;
+      }
+
+      eventBuffer.push(Event::createJoystickEvent((Event::ABS_TYPE)data->type, data->x, data->y));
+      if (data->resp_req)
+      {
+        ret = send_data(ACK, NULL, 0);
+        if (ret != 0)
+        {
+          SerialUSB.println("Error: Failed to ACK JOYSTICK_EVENT");
+          break;
+        }
+      }
+      char buf[MAX_BUF_SZ];
+      snprintf(buf, MAX_BUF_SZ, "Joystick Event. X: %d, Y: %d", data->x, data->x);
+      SerialUSB.println(buf);
+      msg_handled = true;
+      break;
+    }
+
+    case TRIGGER_EVENT:
+    {
+      
+      if (msg->hdr.payload_size < sizeof(struct trigger_event_data))
+      {
+        SerialUSB.println("Error: Failed to execute TRIGGER_EVENT");
+        break;
+      }
+      struct trigger_event_data *data = (struct trigger_event_data*)msg->payload;
+      if (data->type != Event::L_TRIG && data->type != Event::R_TRIG)
+      {
+        SerialUSB.println("Error: Failed to execute TRIGGER_EVENT");
+        break;
+      }
+
+      eventBuffer.push(Event::createTriggerEvent((Event::ABS_TYPE)data->type, data->trigger));
+      if (data->resp_req)
+      {
+        ret = send_data(ACK, NULL, 0);
+        if (ret != 0)
+        {
+          SerialUSB.println("Error: Failed to ACK TRIGGER_EVENT");
+          break;
+        }
+      }
+      char buf[MAX_BUF_SZ];
+      snprintf(buf, MAX_BUF_SZ, "Trigger Event. Trigger: %u", data->trigger);
+      SerialUSB.println(buf);
       msg_handled = true;
       break;
     }

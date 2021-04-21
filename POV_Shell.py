@@ -25,6 +25,8 @@ GET_RTC_TIME =            11
 SET_RTC_TIME =            12
 GET_EXEC_STATE =          13
 SET_EXEC_STATE =          14
+JOYSTICK_EVENT =          15
+TRIGGER_EVENT =           16
 
 #Message Responses
 ACK =                    0
@@ -62,6 +64,12 @@ BTN_KEY_DDOWN = 12
 BTN_KEY_DRIGHT = 13
 BTN_KEY_DX = 14
 BTN_KEY_DY = 15
+
+#ABS Pad Events
+L_STICK =   0
+R_STICK =   1
+L_TRIG =    2
+R_TRIG =    3
 
 
 address = 'F0:C7:7F:94:CC:6C'
@@ -198,6 +206,70 @@ def button_event(event, button_idx, resp):
         if (payload is None):
             return -1
         print("Successfully sent button event")
+        msg_queue_dict[response_id].task_done()
+        return 0
+    except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+            return -1
+
+def joystick_event(joystick_type, x, y, resp):
+    if (not str(joystick_type).isdigit()):
+        return -1
+    if (not str(x).isdigit()):
+        return -1
+    if (not str(y).isdigit()):
+        return -1
+    if (resp == True):
+        resp = 1
+    else:
+        resp = 0
+
+    payload = struct.pack('i i i i', joystick_type, x, y, resp)
+
+    #Setup message that doesn't expect response
+    if (resp == 0):
+        out_msg = getMessage(JOYSTICK_EVENT, payload)
+        parent_conn.send(out_msg)
+        return 0
+
+    #Setup message that expect response
+    response_id = ACK
+    try:
+        payload = message_helper(JOYSTICK_EVENT, payload, response_id)
+        if (payload is None):
+            return -1
+        print("Successfully sent joystick event")
+        msg_queue_dict[response_id].task_done()
+        return 0
+    except queue.Empty as e:
+            print("Error: Timed out waiting for response")
+            return -1
+
+def trigger_event(trigger_type, trigger, resp):
+    if (not str(trigger_type).isdigit()):
+        return -1
+    if (not str(trigger).isdigit()):
+        return -1
+    if (resp == True):
+        resp = 1
+    else:
+        resp = 0
+
+    payload = struct.pack('i i i', trigger_type, trigger, resp)
+
+    #Setup message that doesn't expect response
+    if (resp == 0):
+        out_msg = getMessage(TRIGGER_EVENT, payload)
+        parent_conn.send(out_msg)
+        return 0
+
+    #Setup message that expect response
+    response_id = ACK
+    try:
+        payload = message_helper(TRIGGER_EVENT, payload, response_id)
+        if (payload is None):
+            return -1
+        print("Successfully sent trigger event")
         msg_queue_dict[response_id].task_done()
         return 0
     except queue.Empty as e:
@@ -360,6 +432,52 @@ Type help or ? to list commands
                 raise Exception("Invalid button event: {}".format(arg[1]))
 
             if (button_event(event, button_idx, True) != 0):
+                print("Error sending button event")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_joystick_event(self, arg):
+        'Sends "joystick" command to display: joystick_event <left | right> <x> <y>'
+        try:
+            #Parse Args
+            arg = arg.split()
+            if (arg[0].upper() in ['L', 'LEFT']):
+                joystick_type = L_STICK
+            elif (arg[0].upper() in ['R', 'RIGHT']):
+                joystick_type = R_STICK
+            else:
+                raise Exception("Invalid joystick location: {}".format(arg[0]))
+
+            if (not str(arg[1]).isdigit()):
+                raise Exception("Invalid joystick value: {}".format(arg[1]))
+            joystick_x = int(arg[1])
+
+            if (not str(arg[2]).isdigit()):
+                raise Exception("Invalid joystick value: {}".format(arg[2]))
+            joystick_y = int(arg[2])
+
+            if (joystick_event(joystick_type, x, y, True) != 0):
+                print("Error sending button event")
+        except BaseException:
+            print("Error:", sys.exc_info())
+
+    def do_trigger_event(self, arg):
+        'Sends "trigger" command to display: trigger_event <left | right> <trig_val>'
+        try:
+            #Parse Args
+            arg = arg.split()
+            if (arg[0].upper() in ['L', 'LEFT']):
+                trigger_type = L_TRIG
+            elif (arg[0].upper() in ['R', 'RIGHT']):
+                trigger_type = R_TRIG
+            else:
+                raise Exception("Invalid trigger location: {}".format(arg[0]))
+
+            if (not str(arg[1]).isdigit()):
+                raise Exception("Invalid trigger index: {}".format(arg[1]))
+            trig_val = int(arg[1])
+
+            if (trigger_event(trigger_type, trig_val, True) != 0):
                 print("Error sending button event")
         except BaseException:
             print("Error:", sys.exc_info())
@@ -609,7 +727,18 @@ def message_router():
 
 def gamepad_handler():
     print("In gamepad handler")
-    connect_attempts = 10
+    connect_attempts = 3
+    prev_lx = None
+    prev_ly = None
+    prev_rx = None
+    prev_ry = None
+
+    prev_ltrig = None
+    prev_rtrig = None
+
+    STICK_THRESH = 5000
+    TRIG_THRESH = 5
+
     while 1:
         try:
             while 1:
@@ -618,6 +747,12 @@ def gamepad_handler():
                     pad_event = ""
                     btn_event = -1
                     btn_key = -1
+
+                    new_lstick = False
+                    new_rstick = False
+                    new_ltrig = False
+                    new_rtrig = False
+
                     if (event.ev_type == 'Key'):
                         if (event.code == 'BTN_NORTH'):
                             pad_event += "Triangle: "
@@ -682,7 +817,48 @@ def gamepad_handler():
                             pad_event = "Dpad Down: Pressed"
                             btn_key = BTN_KEY_DDOWN
                             btn_event = BTN_PRESS
-                    
+
+                    elif (event.ev_type == 'Absolute'):
+                        if (event.code == 'ABS_X'):
+                            if (prev_lx == None or (abs(prev_lx - event.state) > STICK_THRESH)):
+                                prev_lx = event.state
+                                new_lstick = True
+                        elif (event.code == 'ABS_Y'):
+                            if (prev_ly == None or (abs(prev_ly - event.state) > STICK_THRESH)):
+                                prev_ly = event.state
+                                new_lstick = True
+                        elif (event.code == 'ABS_RX'):
+                            if (prev_rx == None or (abs(prev_rx - event.state) > STICK_THRESH)):
+                                prev_rx = event.state
+                                new_rstick = True
+                        elif (event.code == 'ABS_RY'):
+                            if (prev_ry == None or (abs(prev_ry - event.state) > STICK_THRESH)):
+                                prev_ry = event.state
+                                new_rstick = True
+                        elif (event.code == 'ABS_Z'):
+                            if (prev_ltrig == None or (abs(prev_ltrig - event.state) > TRIG_THRESH)):
+                                prev_ltrig = event.state
+                                new_ltrig = True
+                        elif (event.code == 'ABS_RZ'):
+                            if (prev_rtrig == None or (abs(prev_rtrig - event.state) > TRIG_THRESH)):
+                                prev_rtrig = event.state
+                                new_rtrig = True
+
+                    if (new_lstick == True and prev_lx != None and prev_ly != None):
+                        joystick_event(L_STICK, prev_lx, prev_ly, False)
+                        pad_event = "Left Stick: (%d,%d)"%(prev_lx, prev_ly)
+                    if (new_rstick == True and prev_rx != None and prev_ry != None):
+                        joystick_event(R_STICK, prev_rx, prev_ry, False)
+                        pad_event = "Right Stick: (%d,%d)"%(prev_rx, prev_ry)
+
+                    if (new_ltrig == True and prev_ltrig != None):
+                        trigger_event(L_TRIG, prev_ltrig, False)
+                        pad_event = "Left Trigger: %d"%(prev_ltrig)
+                    if (new_rtrig == True and prev_rtrig != None):
+                        trigger_event(R_TRIG, prev_rtrig, False)
+                        pad_event = "Right Trigger: %d"%(prev_rtrig)
+
+
                     if (pad_event != ""):
                         print(pad_event)
                     if (btn_event != -1 and btn_key != -1):

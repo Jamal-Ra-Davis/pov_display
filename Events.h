@@ -6,22 +6,57 @@
 class Event
 {
   public:
-    enum EVENT{ON_PRESS, ON_RELEASE, TAP, NUM_BTN_EVENTS};
-  
+    enum EVENT{ON_PRESS, ON_RELEASE, TAP, NUM_BTN_EVENTS, ABS_VAL};
+    enum ABS_TYPE{L_STICK, R_STICK, L_TRIG, R_TRIG};//ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ
+
     EVENT type;
-    uint8_t button_idx;
+    union {
+      uint8_t button_idx;
+      struct {
+        ABS_TYPE type;
+        int16_t x;
+        int16_t y;
+        uint8_t trigger;
+      } abs_data;
+    } data;
     Event(){};
     Event(EVENT t, uint8_t b);
-	
+
+    static Event createButtonEvent(EVENT t, uint8_t b);
+    static Event createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y);
+    static Event createTriggerEvent(ABS_TYPE type, uint8_t trig);
 		static void SerialParser();
 };
 Event::Event(EVENT t, uint8_t b)
 {
   type = t;
-  button_idx = b;
+  data.button_idx = b;
 }
 
-
+Event Event::createButtonEvent(EVENT t, uint8_t b)
+{
+  Event out;
+  out.type = t;
+  out.data.button_idx = b;
+  return out;
+}
+Event Event::createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y)
+{
+  Event out;
+  out.type = ABS_VAL;
+  out.data.abs_data.type = type;
+  out.data.abs_data.x = x;
+  out.data.abs_data.y = y;
+  return out;
+}
+Event Event::createTriggerEvent(ABS_TYPE type, uint8_t trig)
+{
+  Event out;
+  out.type = ABS_VAL;
+  out.data.abs_data.type = type;
+  out.data.abs_data.trigger = trig;
+  return out;
+}
 
 extern RingBuf<Event, 32> eventBuffer;
 RingBuf<Event, 32> eventBuffer;

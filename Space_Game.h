@@ -301,7 +301,7 @@ void Ship::handleEvent(Event e)
   {
     case Event::ON_PRESS:
     {
-      switch(e.button_idx)
+      switch(e.data.button_idx)
       {
         case LEFT:
         {
@@ -333,7 +333,7 @@ void Ship::handleEvent(Event e)
     }
     case Event::ON_RELEASE:
     {
-      switch(e.button_idx)
+      switch(e.data.button_idx)
       {
         case LEFT:
         {
@@ -368,6 +368,34 @@ void Ship::handleEvent(Event e)
       }
       break;
     }
+    case Event::TAP:
+    {
+      switch(e.data.button_idx)
+      {
+        case LEFT:
+        {
+          break;
+        }
+        case FIRE:
+        {
+          setFire(true);
+          break;
+        }
+        case RIGHT:
+        {
+          break;
+        }
+        case UP:
+        {
+          break;
+        }
+        case DOWN:
+        {
+          break;
+        }
+      }
+      break;
+    }
   }
 }
 void Ship::getSerialData()
@@ -384,7 +412,7 @@ void Ship::getSerialData()
     {
       case Event::ON_PRESS:
       {
-        switch(e.button_idx)
+        switch(e.data.button_idx)
         {
           case LEFT:
           {
@@ -416,7 +444,7 @@ void Ship::getSerialData()
       }
       case Event::ON_RELEASE:
       {
-        switch(e.button_idx)
+        switch(e.data.button_idx)
         {
           case LEFT:
           {
@@ -518,7 +546,7 @@ void SpaceGame::update()
   {
     Event e;
     eventBuffer.pop(e);
-    if (e.type == Event::ON_PRESS && e.button_idx == OPTIONS)
+    if (e.type == Event::ON_PRESS && e.data.button_idx == OPTIONS)
     {
       pause = (pause) ? false : true;
     }
