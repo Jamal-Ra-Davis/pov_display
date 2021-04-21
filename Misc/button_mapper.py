@@ -6,12 +6,38 @@ keys_dict = {}
 
 def main():
     cnt = 0
+    prev_x = None
+    prev_y = None
+    prev_z = None
     while cnt < 10000:
         #print("Hi")
         events = get_gamepad()
         for event in events:
             #if (event.ev_type == 'Key'):
-            #if (event.ev_type != 'Sync' and event.ev_type != 'Absolute'):
+            if (event.ev_type != 'Sync' and event.ev_type == 'Absolute'):
+                print(event.code)
+                if (event.code == 'ABS_X' or event.code == 'ABS_Y' or event.code != 'ABS_Y'):
+                    #print("type:", event.ev_type, "code:", event.code, "state:", event.state)
+                    new = False
+                    new_z = False
+                    if (event.code == 'ABS_X'):
+                        if (prev_x == None or (abs(prev_x - event.state) > 1000)):
+                            prev_x = event.state
+                            new = True
+                    if (event.code == 'ABS_Y'):
+                        if (prev_y == None or (abs(prev_y - event.state) > 1000)):
+                            prev_y = event.state
+                            new = True
+                    if (new == True and prev_x != None and prev_y != None):
+                        print("(x,y) = (%d, %d)"%(prev_x, prev_y))
+
+                    if (event.code == 'ABS_Z'):
+                        if (prev_z == None or (abs(prev_z - event.state) > 5)):
+                            prev_z = event.state
+                            new_z = True
+                    if (new_z == True and prev_z != None):
+                        print("(z) = (%d)"%(prev_z))
+
             #if ('ABS_HAT' in event.code):
             #if (event.ev_type != 'Sync'):
             #    if (event.code == 'ABS_RY'):
