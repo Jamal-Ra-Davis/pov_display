@@ -16,6 +16,8 @@ class Event
         ABS_TYPE type;
         int16_t x;
         int16_t y;
+        uint16_t angle;
+        uint8_t mag;
         uint8_t trigger;
       } abs_data;
     } data;
@@ -23,7 +25,7 @@ class Event
     Event(EVENT t, uint8_t b);
 
     static Event createButtonEvent(EVENT t, uint8_t b);
-    static Event createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y);
+    static Event createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y, uint16_t angle, uint8_t mag);
     static Event createTriggerEvent(ABS_TYPE type, uint8_t trig);
 		static void SerialParser();
 };
@@ -40,13 +42,15 @@ Event Event::createButtonEvent(EVENT t, uint8_t b)
   out.data.button_idx = b;
   return out;
 }
-Event Event::createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y)
+Event Event::createJoystickEvent(ABS_TYPE type, int16_t x, int16_t y, uint16_t angle, uint8_t mag)
 {
   Event out;
   out.type = ABS_VAL;
   out.data.abs_data.type = type;
   out.data.abs_data.x = x;
   out.data.abs_data.y = y;
+  out.data.abs_data.angle = angle;
+  out.data.abs_data.mag = mag;
   return out;
 }
 Event Event::createTriggerEvent(ABS_TYPE type, uint8_t trig)

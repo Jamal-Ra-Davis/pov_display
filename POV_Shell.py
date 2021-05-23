@@ -8,6 +8,8 @@ import logging
 import multiprocessing
 from inputs import get_gamepad
 from datetime import datetime
+import numpy as np
+import math
 
 #Message Commands
 GET_DISPLAY_SIZE =        0
@@ -224,7 +226,17 @@ def joystick_event(joystick_type, x, y, resp):
     else:
         resp = 0
 
-    payload = struct.pack('i i i i', joystick_type, x, y, resp)
+    STICK_MAX = 32768
+    mag = math.sqrt(x**2 + y**2)/STICK_MAX
+    mag = round(255*mag)
+    angle = np.arctan2(y, x)/(2*math.pi) # -180 to 180
+    if (angle < 0):
+        angle += 1.0
+    angle = round(angle*360)
+    if (angle == 360):
+        angle = 0
+
+    payload = struct.pack('i i i i i i', joystick_type, x, y, angle, mag, resp)
 
     #Setup message that doesn't expect response
     if (resp == 0):
@@ -456,7 +468,7 @@ Type help or ? to list commands
                 raise Exception("Invalid joystick value: {}".format(arg[2]))
             joystick_y = int(arg[2])
 
-            if (joystick_event(joystick_type, x, y, True) != 0):
+            if (joystick_event(joystick_type, joystick_x, joystick_y, True) != 0):
                 print("Error sending button event")
         except BaseException:
             print("Error:", sys.exc_info())

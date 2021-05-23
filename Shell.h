@@ -514,7 +514,12 @@ int Shell::execute_command(struct message *msg)
         break;
       }
 
-      eventBuffer.push(Event::createJoystickEvent((Event::ABS_TYPE)data->type, data->x, data->y));
+    Event e = Event::createJoystickEvent((Event::ABS_TYPE)data->type, 
+                                          (int16_t)data->x, 
+                                          (int16_t)data->y,
+                                          (uint16_t)data->angle,
+                                          (uint8_t)data->mag);
+      eventBuffer.push(e);
       if (data->resp_req)
       {
         ret = send_data(ACK, NULL, 0);

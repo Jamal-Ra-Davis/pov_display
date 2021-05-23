@@ -33,6 +33,8 @@ struct joystick_event_data {
   uint32_t type;
   int32_t x;
   int32_t y;
+  uint32_t angle;
+  uint32_t mag;
   int32_t resp_req;
 };
 struct trigger_event_data {

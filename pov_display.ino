@@ -40,7 +40,7 @@ RTCZero rtc;
 
 int hall;
 
-pov_state_t exec_state = CLOCK_DISPLAY;
+pov_state_t exec_state = DS4_TEST;
 bool pov_state_change = true;
 int change_state(pov_state_t state)
 {
@@ -1471,11 +1471,15 @@ void clock_test()
 
 void ds4_analog_test()
 {
-  static int32_t lstick_x = 0;
-  static int32_t lstick_y = 0;
+  static int16_t lstick_x = 0;
+  static int16_t lstick_y = 0;
+  static uint16_t lstick_angle = 0;
+  static uint8_t lstick_mag = 0;
 
-  static int32_t rstick_x = 0;
-  static int32_t rstick_y = 0;
+  static int16_t rstick_x = 0;
+  static int16_t rstick_y = 0;
+  static uint16_t rstick_angle = 0;
+  static uint8_t rstick_mag = 0;
 
   static uint8_t l_trig = 0;
   static uint8_t r_trig = 0;
@@ -1496,12 +1500,16 @@ void ds4_analog_test()
       {
         lstick_x = e.data.abs_data.x;
         lstick_y = e.data.abs_data.y;
+        lstick_angle = e.data.abs_data.angle;
+        lstick_mag = e.data.abs_data.mag;
         break;
       }
       case Event::R_STICK:
       {
         rstick_x = e.data.abs_data.x;
         rstick_y = e.data.abs_data.y;
+        rstick_angle = e.data.abs_data.angle;
+        rstick_mag = e.data.abs_data.mag;
         break;
       }
       case Event::L_TRIG:
@@ -1520,8 +1528,8 @@ void ds4_analog_test()
       }
     }
   }
-
-
+  
+  /*
   int16_t norm_lstick_x = (100*lstick_x)/0xEFFF;
   int16_t norm_lstick_y = (100*lstick_y)/0xEFFF;
   //int16_t norm_rstick_x = (100*rstick_x)/0xEFFF;
@@ -1529,17 +1537,31 @@ void ds4_analog_test()
 
   int16_t l_mag = sqrt(norm_lstick_x*norm_lstick_x + norm_lstick_y*norm_lstick_y);
   //int16_t r_mag = sqrt(norm_rstick_x*norm_rstick_x + norm_rstick_y*norm_rstick_y);
+  */
 
   uint16_t norm_l_trig = ((LENGTH-1)*l_trig)/255;
   uint16_t norm_r_trig = ((LENGTH-1)*r_trig)/255;
+  
 
+  frame_buffer.drawBlock(0, 0, HEIGHT-1, norm_l_trig, 3, HEIGHT-1, 255, 0, 255);//Purple
+  frame_buffer.drawBlock(0, 4, HEIGHT-1, norm_r_trig, 7, HEIGHT-1, 255, 255, 0);//Yellow
 
-  frame_buffer.drawBlock(0, 0, HEIGHT-1, norm_l_trig, 3, HEIGHT-1, 255, 0, 255);
-  frame_buffer.drawBlock(0, 4, HEIGHT-1, norm_r_trig, 7, HEIGHT-1, 255, 255, 0);
-
-  if (l_mag > 30)
+  if (lstick_mag >= 64)
   {
-
+    //angle = 0 to 359 => 0 to LENGTH - 1 
+    uint16_t l_idx = ((LENGTH-1)*lstick_angle)/359;
+    for (int j=0; j<WIDTH; j++)
+    {
+      frame_buffer.setColors(l_idx, j, 0, 0, 255, 0); 
+    }
   }
-
+  if (rstick_mag >= 64)
+  {
+    //angle = 0 to 359 => 0 to LENGTH - 1 
+    uint16_t r_idx = ((LENGTH-1)*rstick_angle)/359;
+    for (int j=0; j<WIDTH; j++)
+    {
+      frame_buffer.setColors(r_idx, j, 1, 0, 0, 255); 
+    }
+  }
 }
