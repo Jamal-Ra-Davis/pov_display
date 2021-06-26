@@ -498,6 +498,171 @@ bool Ship::checkBlockCollision(Vector3d *block)
   return collide;
 }
 
+/*
+enum FACE_STATES {NEUTRAL_0, ANGRY_1, SAD_2, FLAT_3, NEUTAL_BROW_4, RAISED_BROW_5, OPEN_MOUTH_6, NUM_FACES};
+const static uint8_t FACE_BUF[NUM_FACES][6] = {
+                              {0x00, 0x24, 0x24, 0x00, 0x3C, 0x00},//NEUTRAL_0
+                              {0x00, 0x7E, 0x24, 0x00, 0x3C, 0x42},//ANGRY_1
+                              {0x24, 0x00, 0x3C, 0x66, 0x42, 0x00},//SAD_2
+                              {0x00, 0x00, 0x66, 0x00, 0x3C, 0x00},//FLAT_3
+                              {0x00, 0x66, 0x24, 0x00, 0x3C, 0x00},//NEUTAL_BROW_4
+                              {0x60, 0x26, 0x24, 0x00, 0x0C, 0x00},//RAISED_BROW_5
+                              {0x66, 0x00, 0x3C, 0x7E, 0x7E, 0x7E},//OPEN_MOUTH_6
+                            };
+*/
+struct sprite {
+  uint8_t data[6];
+};
+struct sprite test = {
+  .data = {0x0,0x24,0x24,0x0,0x3C,0x0},
+};
+#define NUM_FACES 18                            
+const static uint8_t FACE_BUF[18][6] = {
+                              {0x0,0x24,0x24,0x0,0x3C,0x0},
+                              {0x0,0x7E,0x24,0x0,0x3C,0x42},
+                              {0x24,0x0,0x3C,0x66,0x42,0x0},
+                              {0x60,0x26,0x24,0x0,0xC,0x0},
+                              {0x81,0x81,0x0,0x0,0x0,0x7E},
+                              {0x0,0x0,0x66,0x0,0x3C,0x0},
+                              {0x24,0x24,0x0,0x3C,0x3C,0x3C},
+                              {0x24,0x0,0x7E,0x0,0x0,0x0},
+                              {0x0,0x0,0xE7,0x0,0x7E,0x0},
+                              {0x0,0x66,0x24,0x0,0x3C,0x0},
+                              {0x66,0x0,0x3C,0x7E,0x7E,0x7E},
+                              {0x0,0x0,0x0,0x24,0x0,0x7E},
+                              {0xA0,0xA0,0xA0,0x0,0x0,0xC0},
+                              {0x0,0x66,0x24,0x0,0x60,0x60},
+                              {0x0,0x66,0x24,0x0,0x10,0x0},
+                              {0x0,0x66,0x24,0x0,0x8,0x0},
+                              {0x0,0x66,0x24,0x0,0x4,0x0},
+                              {0x0,0x66,0x24,0x0,0x2,0x0},
+};
+const static uint8_t RAW_SPRITE[18*6] = {
+                              0x0,0x24,0x24,0x0,0x3C,0x0,
+                              0x0,0x7E,0x24,0x0,0x3C,0x42,
+                              0x24,0x0,0x3C,0x66,0x42,0x0,
+                              0x60,0x26,0x24,0x0,0xC,0x0,
+                              0x81,0x81,0x0,0x0,0x0,0x7E,
+                              0x0,0x0,0x66,0x0,0x3C,0x0,
+                              0x24,0x24,0x0,0x3C,0x3C,0x3C,
+                              0x24,0x0,0x7E,0x0,0x0,0x0,
+                              0x0,0x0,0xE7,0x0,0x7E,0x0,
+                              0x0,0x66,0x24,0x0,0x3C,0x0,
+                              0x66,0x0,0x3C,0x7E,0x7E,0x7E,
+                              0x0,0x0,0x0,0x24,0x0,0x7E,
+                              0xA0,0xA0,0xA0,0x0,0x0,0xC0,
+                              0x0,0x66,0x24,0x0,0x60,0x60,//13
+                              0x0,0x66,0x24,0x0,0x10,0x0,//14
+                              0x0,0x66,0x24,0x0,0x8,0x0,
+                              0x0,0x66,0x24,0x0,0x4,0x0,
+                              0x0,0x66,0x24,0x0,0x2,0x0,
+};
+
+class Animation {
+  private:
+    const uint8_t *sprite_data;
+    uint16_t buffer_size;
+    uint8_t data_span;
+
+    uint16_t start_frame;
+    uint16_t current_frame;
+    uint8_t num_frames;
+  
+    int loop_number;
+    int loop_counter;
+
+    int delay_cycles;
+    int delay_cnt;
+
+    bool complete;
+    bool played_once;
+    bool init;
+
+  public:
+    Animation(const uint8_t *data, uint16_t size, uint8_t span);//Called once
+    void startAnimation(uint8_t frame_index, uint8_t num_frames_, int delay_cycles_, int loop_number_);//Called each time animation changes
+    void update();
+    bool animationComplete() {return complete;}
+    void draw(doubleBuffer *frame_buffer, int x, uint8_t r, uint8_t g, uint8_t b);
+};
+Animation::Animation(const uint8_t *data, uint16_t size, uint8_t span) {
+  sprite_data = data;
+  buffer_size = size;
+  data_span = span;
+  init = false;
+}
+void Animation::startAnimation(uint8_t frame_index, uint8_t num_frames_, int delay_cycles_, int loop_number_=-1) {
+  start_frame = frame_index; 
+  current_frame = start_frame;
+  num_frames = num_frames_;
+
+  loop_number = loop_number_;
+  loop_counter = 0;
+
+  delay_cycles = delay_cycles_;
+  delay_cnt = 0;
+
+  complete = false;
+  played_once = false;
+  init = true;
+}
+void Animation::update() {
+  if (!init)
+    return;
+
+  if (delay_cnt++ % delay_cycles != 0)
+    return;
+
+  uint16_t prev_frame = current_frame;
+  //current_frame += span;
+
+  current_frame++;
+  int frame_idx = current_frame - start_frame;
+  if (frame_idx >= num_frames)
+  {
+    current_frame = prev_frame;
+    if ((loop_number < 0) || (loop_counter < loop_number))
+    {
+      current_frame = start_frame;
+      played_once = true;
+      loop_counter++;
+    }
+    else
+    {
+      complete = true;
+    }
+  }
+}
+void Animation::draw(doubleBuffer *frame_buffer, int x, uint8_t r, uint8_t g, uint8_t b) {
+  if (!init)
+    return;
+  if (sprite_data == NULL)
+    return;
+  if (current_frame + 6 > buffer_size)
+    return;
+
+  for (int k = 0; k<6; k++)
+  {
+    uint16_t current = current_frame*data_span + k;
+    for (int j=0; j<8; j++)
+    {
+      if (current >= buffer_size)
+        return;
+      if (sprite_data[current] & (1 << j))
+      {
+        frame_buffer->setColors(x, j, 5-k, r, g, b);
+      }
+    }
+  }
+}
+/*
+class Animation 
+{
+  private:
+
+  public:
+};
+*/
 class SpaceGame
 {
   private:
@@ -507,6 +672,7 @@ class SpaceGame
     uint8_t hits;
     uint8_t cnt;
     bool pause;
+    Animation face_animation;
 
     static constexpr int block_color[3] = {70, 100, 70};
     static const uint8_t delay_cnt = 10;
@@ -518,7 +684,7 @@ class SpaceGame
     void update();
     void draw(doubleBuffer *frame_buffer);
 };
-SpaceGame::SpaceGame()
+SpaceGame::SpaceGame() : face_animation(RAW_SPRITE, 18*6, 6)
 {
   reset();
 }
@@ -532,6 +698,8 @@ void SpaceGame::reset()
   hits = MAX_HITS;
   cnt = 0;
   pause = false;
+
+  face_animation.startAnimation(13, 5, 3, 10);
 }
 void SpaceGame::update()
 {
@@ -561,6 +729,7 @@ void SpaceGame::update()
   }
 
   ship.update();
+  face_animation.update();
   block_collide = ship.checkBlockCollision(block);
   if (block_collide)
   {
@@ -576,6 +745,23 @@ void SpaceGame::update()
 }
 void SpaceGame::draw(doubleBuffer *frame_buffer)
 {
+  static int cnt = 0;
+  int idx = (cnt/100) % NUM_FACES;
+  cnt++;
+
+  face_animation.draw(frame_buffer, 10, 255, 128, 0);
+
+  for (int k = 0; k<6; k++)
+  {
+    for (int j=0; j<8; j++)
+    {
+      if (FACE_BUF[idx][k] & (1 << j))
+      {
+        frame_buffer->setColors(60, j, 5-k, 0, 0, 255);
+      }
+    }
+  }
+
   if (!block_collide)
   {
     frame_buffer->drawBlock(block[0], block[1], block_color[RED], block_color[GREEN], block_color[BLUE]);

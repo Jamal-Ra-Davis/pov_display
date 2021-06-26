@@ -40,7 +40,7 @@ RTCZero rtc;
 
 int hall;
 
-pov_state_t exec_state = DS4_TEST;
+pov_state_t exec_state = SPACE_GAME;
 bool pov_state_change = true;
 int change_state(pov_state_t state)
 {
