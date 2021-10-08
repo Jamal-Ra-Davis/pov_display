@@ -67,6 +67,44 @@ void hallTrigger();
 
 long timer_0, timer_delta;
 
+class MathLookup {
+  private:
+    float *raw_sin;
+    float *raw_cos;
+    float *raw_tan;
+
+    uint16_t sin_size;
+    uint16_t cos_size;
+    uint16_t tan_size;
+  public:
+    MathLookup(float *sin_array, uint16_t sin_sz, float *cos_array, uint16_t cos_sz, float *tan_array, uint16_t tan_sz);
+    float sin(float rad);
+    float cos(float rad);
+    float tan(float rad);
+};
+MathLookup::MathLookup(float *sin_array, uint16_t sin_sz, float *cos_array, uint16_t cos_sz, float *tan_array, uint16_t tan_sz)
+{
+  raw_sin = sin_array;
+  sin_size = sin_sz;
+
+  raw_cos = cos_array;
+  cos_size = cos_sz;
+
+  raw_tan = tan_array;
+  tan_size = tan_sz;
+}
+float MathLookup::sin(float rad)
+{
+  float f_idx = (rad*sin_size)/TWO_PI;//Still need to do floating point math 
+  int idx = round(f_idx);
+  if (idx == sin_size) 
+  {
+    idx = 0;
+  }
+  return raw_sin[idx];
+}
+
+
 void processSerialCommands()
 {
   //Capture Serial Data if Available
