@@ -513,9 +513,9 @@ const static uint8_t FACE_BUF[NUM_FACES][6] = {
 struct sprite {
   uint8_t data[6];
 };
-struct sprite test = {
-  .data = {0x0,0x24,0x24,0x0,0x3C,0x0},
-};
+//struct sprite test = {
+//  .data = {0x0,0x24,0x24,0x0,0x3C,0x0},
+//};
 #define NUM_FACES 18                            
 const static uint8_t FACE_BUF[18][6] = {
                               {0x0,0x24,0x24,0x0,0x3C,0x0},

@@ -69,6 +69,7 @@ int ser_idx = 0;
 
 void Event::SerialParser()
 {
+  #ifndef CONFIG_POV_SIMULATOR
   while(Serial1.available())
   {
     char c = Serial1.read();
@@ -97,9 +98,10 @@ void Event::SerialParser()
       }
     }
   }
+  #endif
 }
 
-
+#ifndef CONFIG_POV_SIMULATOR
 void process_serial_commands(doubleBuffer* frame_buffer)
 {
   static RingBuf<char, 32> serialBuffer;
@@ -185,6 +187,7 @@ void process_serial_commands(doubleBuffer* frame_buffer)
     }
   }
 }
+#endif
 
 
 

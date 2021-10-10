@@ -13,6 +13,8 @@
 #include "DMA_SPI.h"
 #include "Shell.h"
 #include <RTCZero.h>
+//#include "Main.h"
+#include "Color.h"
 
 #define LED_PIN 9
 #define HALL_PIN 6
@@ -242,6 +244,20 @@ void setup()
       shell_cnt = 0;
     }
     delay(5);
+  }
+
+
+  while (0) 
+  {
+    Color test_color = Color::getColorHSV(200, 255, 255);
+    //CRGB test_color = CHSV(200, 255, 255);
+    LOG_POV_SHELL((&shell), "CRGB: (%d, %d, %d)\n", test_color.r, test_color.g, test_color.b);
+    SERIAL_PRINTF(SerialUSB, "CRGB: (%d, %d, %d)\n", test_color.r, test_color.g, test_color.b);
+
+    //Color c;
+    //c.setColorHSV(200, 255, 255);
+    //LOG_POV_SHELL((&shell), "Color: (%d, %d, %d)\n", c.r, c.g, c.b);
+    delay(5000);
   }
 }
 

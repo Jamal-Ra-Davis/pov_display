@@ -7,7 +7,7 @@
 
 void textAnimation(doubleBuffer *frame_buffer)
 {
-  static char *text[4] = {"CMU ECE",
+  static const char *text[4] = {"CMU ECE",
                           "HELLO WORLD",
                           "EMBEDDED SYSTEMS ARE FUN",
                           "DONT LET YOUR DREAMS BE DREAMS"};
@@ -297,7 +297,7 @@ void wobbly_words(doubleBuffer *frame_buffer)
   uint8_t r__=128;
   uint8_t g__=128;
   uint8_t b__=128;
-  char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
+  const char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
   int word_idx = 0;
   while(1)
   {
@@ -556,7 +556,7 @@ void ball_collision(doubleBuffer *frame_buffer)
 
 void random_walk(doubleBuffer *frame_buffer)
 {
-  enum DIRECTION{CW, CCW, IN, OUT, UP, DOWN, NUM_DIR};
+  enum DIRECTION{CW_DIR, CCW_DIR, IN_DIR, OUT_DIR, UP_DIR, DOWN_DIR, NUM_DIR};
   Vector3d pos;
   uint8_t shift_cnt = 0;
   
@@ -587,42 +587,42 @@ void random_walk(doubleBuffer *frame_buffer)
     uint8_t dir = rand() % NUM_DIR;
     switch(dir)
     {
-      case CW:
+      case CW_DIR:
         pos.x++;
         if (pos.x >= LENGTH)
         {
           pos.x = 0;
         }
         break;
-      case CCW:
+      case CCW_DIR:
         pos.x--;
         if (pos.x < 0)
         {
           pos.x = LENGTH - 1;
         }
         break;
-      case IN:
+      case IN_DIR:
         pos.y--;
         if (pos.y < 0)
         {
           pos.y = WIDTH - 1;
         }
         break;
-      case OUT:
+      case OUT_DIR:
         pos.y++;
         if (pos.y >= WIDTH)
         {
           pos.y = 0;
         }
         break;
-      case UP:
+      case UP_DIR:
         pos.z++;
         if (pos.z >= HEIGHT)
         {
           pos.z = 0;
         }
         break;
-      case DOWN:
+      case DOWN_DIR:
         pos.z--;
         if (pos.z < 0)
         {
@@ -1013,7 +1013,7 @@ void MazeGoal::getEndPoints(Vector3d *p0, Vector3d *p1)
 
 class MazeGame {
   private:
-    enum BUTTON_MAP{LEFT=1, FIRE, RIGHT, UP, DOWN, IN, OUT};
+    enum BUTTON_MAP{LEFT_DIR=1, FIRE, RIGHT_DIR, UP_DIR, DOWN_DIR, IN_DIR, OUT_DIR};
     enum STATE{START_STATE, PLAY_STATE, END_STATE} game_state = START_STATE;
     MazeWall walls[8];
     MazePlayer player;
@@ -1101,37 +1101,37 @@ int MazeGame::handleInputs()
       {
         switch (e.data.button_idx)
         {
-          case LEFT:
+          case LEFT_DIR:
           {
             player.setMoveCCW(true);
             SerialUSB.println("set move CCW");
             break;
           }
-          case RIGHT:
+          case RIGHT_DIR:
           {
             player.setMoveCW(true);
             SerialUSB.println("set move CW");
             break;
           }
-          case UP:
+          case UP_DIR:
           {
             player.setMoveUp(true);
             SerialUSB.println("set move UP");
             break;
           }
-          case DOWN:
+          case DOWN_DIR:
           {
             player.setMoveDown(true);
             SerialUSB.println("set move DOWN");
             break;
           }
-          case IN:
+          case IN_DIR:
           {
             player.setMoveIn(true);
             SerialUSB.println("set move IN");
             break;
           }
-          case OUT:
+          case OUT_DIR:
           {
             player.setMoveOut(true);
             SerialUSB.println("set move OUT");
@@ -1148,33 +1148,33 @@ int MazeGame::handleInputs()
       {
         switch (e.data.button_idx)
         {
-          case LEFT:
+          case LEFT_DIR:
           {
             player.setMoveCCW(false);
             break;
           }
-          case RIGHT:
+          case RIGHT_DIR:
           {
             player.setMoveCW(false);
             break;
           }
-          case UP:
+          case UP_DIR:
           {
             player.setMoveUp(false);
             break;
           }
-          case DOWN:
+          case DOWN_DIR:
           {
             player.setMoveDown(false);
             break;
           }
-          case IN:
+          case IN_DIR:
           {
             player.setMoveIn(false);
             SerialUSB.println("set move IN");
             break;
           }
-          case OUT:
+          case OUT_DIR:
           {
             player.setMoveOut(false);
             SerialUSB.println("set move OUT");

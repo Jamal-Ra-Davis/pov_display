@@ -2,7 +2,15 @@
 #define FRAME_BUFFER_LIB
 
 #include "Vector3d.h"
+
+#ifdef CONFIG_POV_SIMULATOR
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "Arduino.h"
+#else
 #include<FastLED.h>
+#endif
 
 enum COLORS {RED, GREEN, BLUE, NUM_COLORS};
 
@@ -396,6 +404,7 @@ void doubleBuffer::drawLine(Vector3d p0, Vector3d p1, uint8_t r, uint8_t g, uint
   }
 }
 
+#ifndef CONFIG_POV_SIMULATOR
 void driveLEDS(int buf_idx, int *buf_offset, doubleBuffer* frame_buffer, SPIClass* mySPI)
 {
   frameBuffer* read_buffer = frame_buffer->getReadBuffer();
@@ -430,7 +439,7 @@ void driveLEDS(int buf_idx, int *buf_offset, doubleBuffer* frame_buffer, SPIClas
   mySPI->endTransaction();
   //buf_idx++;
 }
-
+#endif
 
 
 #endif
