@@ -13,8 +13,22 @@
 #include "test_animations.h"
 #include "Color.h"
 
+/*
+union POV_Games{
+    SpaceGame space_game;
+    MazeGame maze_game;
+    POV_Games() {}
+} pov_games;
+*/
 
-static SpaceGame space_game_dbg;
+//Can't use common memory until you have reset/init functions for all games's sub-classes
+
+uint8_t game_buf[640];
+SpaceGame* space_game = (SpaceGame*)game_buf;
+MazeGame* maze_game = (MazeGame*)game_buf;
+
+//SpaceGame space_game;
+//MazeGame maze_game;
 
 void scratch_loop(doubleBuffer* frame_buffer);
 void block_test(doubleBuffer* frame_buffer);
@@ -23,40 +37,111 @@ void ds4_test(doubleBuffer* frame_buffer);
 void ds4_analog_test(doubleBuffer* frame_buffer);
 void clock_test(doubleBuffer* frame_buffer);
 
+pov_state_t exec_state = SPACE_GAME;
+bool pov_state_change = true;
+int change_state(pov_state_t state)
+{
+  if (exec_state != state)
+  {
+    exec_state = state;
+    pov_state_change = true;
+  }
+  return 0;
+}
+
+
+typedef void(*init_function_t)(void*);
+void init_spacegame(void* args)
+{
+    SpaceGame* game = (SpaceGame*)args;
+    game->reset();
+}
+void init_mazegame(void* args)
+{
+    MazeGame* game = (MazeGame*)args;
+    game->init();
+}
+void check_state_change(init_function_t init_func, void *args)
+{
+    if (pov_state_change)
+    {
+        pov_state_change = false;
+        //do init function
+        if (init_func != NULL)
+            init_func(args);
+    }
+}
+
 void main_setup(doubleBuffer* frame_buffer)
 {
+    SERIAL_PRINTF(SerialUSB, "sizeof(space_game) = %d, sizeof(maze_game) = %d\n", sizeof(SpaceGame), sizeof(MazeGame));
     frame_buffer->reset();
-    exec_state = SPACE_GAME;
+    change_state(SPACE_GAME);
+    //maze.init();
 }
 
 void main_exec(doubleBuffer* frame_buffer)
 {
-  switch(exec_state)
-  {
+    int num_events = eventBuffer.size();
+    for (int i = 0; i < num_events; i++) 
+    {
+        Event e;
+        if (!eventBuffer.pop(e))
+        {
+            SERIAL_PRINTF(SerialUSB, "Error: Failed to pop event from buffer");
+            continue;
+        }
+
+        if (e.type == Event::ON_PRESS && e.data.button_idx == SHARE)
+        {
+            pov_state_t next_state = (pov_state_t)((exec_state + 1) % NUM_POV_STATES);
+            change_state(next_state);
+        }
+        else
+        {
+            eventBuffer.push(e);
+        }
+    }
+    
+
+    switch(exec_state)
+    {
     case POV_SCRATCH_LOOP:
-      scratch_loop(frame_buffer);
-      break;
+        //scratch_loop(frame_buffer);
+        //rainbow_swirl(frame_buffer);
+        check_state_change(init_mazegame, maze_game);
+        maze_game->update();
+        maze_game->draw(frame_buffer);
+        break;
     case POV_TEST:
-      test_exec(frame_buffer); //Uncomment after testing
-      //textAnimation(frame_buffer);
-      //pinWheelAnimation_0(frame_buffer);
-      //vortexAnimation(frame_buffer);
-      //pulseAnimation(frame_buffer);
-      break;
+        test_exec(frame_buffer); //Uncomment after testing
+        //textAnimation(frame_buffer);
+        //pinWheelAnimation_0(frame_buffer);
+        //vortexAnimation(frame_buffer);
+        //pulseAnimation(frame_buffer);
+        break;
     case DS4_TEST:
-      //ds4_test(frame_buffer);
-      ds4_analog_test(frame_buffer);
-      break;
+        ds4_test(frame_buffer);
+        //ds4_analog_test(frame_buffer);
+        break;
     case SPACE_GAME:
-      space_game_dbg.update();
-      space_game_dbg.draw(frame_buffer);
-      break;
+        /*
+        if (pov_state_change)
+        {
+            pov_state_change = false;
+            pov_games.space_game.reset();
+        }
+        */
+        check_state_change(init_spacegame, space_game);
+        space_game->update();
+        space_game->draw(frame_buffer);
+        break;
     case CLOCK_DISPLAY:
-      clock_test(frame_buffer);
-      break;
+        clock_test(frame_buffer);
+        break;
     default:
-      break;
-  }
+        break;
+    }
 }
 
 void scratch_loop(doubleBuffer* frame_buffer)
@@ -68,7 +153,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
     //uint8_t height_transform[4] = {3, 4, 3, 1};
     uint8_t height_transform[15] = {2, 4, 4, 5, 5, 5, 5, 4, 4, 3, 2, 1, 1, 1, 1};
     uint8_t trans_size = 15;
-    while(1)
+    while(0)
     {
         frame_buffer->clear();  
         for (int i=0; i<LENGTH; i++)
@@ -473,7 +558,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
     }
     ball_collision(frame_buffer);
     
-    struct pixel rgb;
+    Color rgb;
     rgb.r = 20;
     rgb.g = 60;
     rgb.b = 120;
@@ -558,6 +643,9 @@ void scratch_loop(doubleBuffer* frame_buffer)
 }
 void block_test(doubleBuffer* frame_buffer)
 {
+#ifdef CONFIG_POV_SIMULATOR  
+  static const int buf_offset[HEIGHT] = { 2 * (LENGTH / 6), 3 * (LENGTH / 6), 4 * (LENGTH / 6), 5 * (LENGTH / 6), 0 * (LENGTH / 6), 1 * (LENGTH / 6) };
+#endif
   SerialUSB.println("Entering blocktest");
   Vector3d vec0_s(0, 0, 0), vec0_e(9, 4, 1);
   uint8_t r0, g0, b0;

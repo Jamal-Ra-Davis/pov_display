@@ -101,9 +101,10 @@ void Event::SerialParser()
   #endif
 }
 
-#ifndef CONFIG_POV_SIMULATOR
+//TODO: Switch references to this over to using event buffer, and remove
 void process_serial_commands(doubleBuffer* frame_buffer)
 {
+  #ifndef CONFIG_POV_SIMULATOR
   static RingBuf<char, 32> serialBuffer;
   while (Serial1.available())
   {
@@ -186,8 +187,9 @@ void process_serial_commands(doubleBuffer* frame_buffer)
       //SerialUSB.print(c);
     }
   }
+  #endif
 }
-#endif
+
 
 
 

@@ -4,6 +4,8 @@
 #include "FrameBuffer.h"
 #include "Vector3d.h"
 #include "Events.h"
+#include "Color.h"
+#include "Shell.h"
 
 void textAnimation(doubleBuffer *frame_buffer)
 {
@@ -726,8 +728,8 @@ void MazeWall::draw(doubleBuffer *frame_buffer, Vector3d offset)
 
 class MazePlayer {
   private:
+    static const uint8_t size = 2;
     Vector3d pos;
-    const uint8_t size = 2;
     MazeWall *walls;
     uint8_t N_walls;
     bool cw, ccw, in, out, up, down;
@@ -1010,16 +1012,25 @@ void MazeGoal::getEndPoints(Vector3d *p0, Vector3d *p1)
   *p1 = pos1;
 }
 
-
 class MazeGame {
   private:
-    enum BUTTON_MAP{LEFT_DIR=1, FIRE, RIGHT_DIR, UP_DIR, DOWN_DIR, IN_DIR, OUT_DIR};
+    enum BUTTON_MAP{
+      LEFT_DIR=DLEFT, 
+      FIRE = SQUARE, 
+      RIGHT_DIR=DRIGHT, 
+      UP_DIR=RBUMP, 
+      DOWN_DIR=LBUMP, 
+      IN_DIR = DUP, 
+      OUT_DIR = DDOWN,
+    };
     enum STATE{START_STATE, PLAY_STATE, END_STATE} game_state = START_STATE;
     MazeWall walls[8];
     MazePlayer player;
     MazeGoal goal;
     bool goal_reached;
-    
+    uint8_t cnt;
+    static const uint8_t delay_cnt = 7;
+
     int handleInputs();
       
   public:
@@ -1030,7 +1041,7 @@ class MazeGame {
 };
 MazeGame::MazeGame()
 {
-  goal_reached = false;
+  //goal_reached = false;
 }
 void MazeGame::init()
 {
@@ -1044,9 +1055,15 @@ void MazeGame::init()
   player.setPlayer(Vector3d(2, 0, 0), walls, 8);
   goal.init(Vector3d(LENGTH - 6, 2, 0));
   goal_reached = false;
+  cnt = 0;
 }
 void MazeGame::update()
 {
+  if (cnt++ % delay_cnt != 0)
+  {
+    return;
+  }
+
   handleInputs();
   
   player.update();
@@ -1190,6 +1207,41 @@ int MazeGame::handleInputs()
     }
   }
   return 0;
+}
+
+void rainbow_swirl(doubleBuffer* frame_buffer)
+{
+    static const int width_offset = 60 / (WIDTH - 1);
+    static const uint8_t height_transform[15] = { 2, 4, 4, 5, 5, 5, 5, 4, 4, 3, 2, 1, 1, 1, 1 };
+    static const uint8_t trans_size = 15;
+    static const uint8_t delay_cycles = 6;
+
+    static int hue_offset = 0;
+    static uint8_t delay_cnt = 0;
+    
+    for (int i = 0; i < LENGTH; i++)
+    {
+        int hue = (i * 255) / LENGTH;
+        int k = 0;
+        if ((i >= 20) && i < (20 + trans_size))
+        {
+            int idx = i - 20;//i from 0 to trans_size - 1
+            k = height_transform[trans_size - 1 - idx];
+        }
+
+        for (int j = 0; j < WIDTH; j++)
+        {
+            Color color = Color::getColorHSV(hue + hue_offset + ((WIDTH - 1 - j) * width_offset), 255, 255);
+            frame_buffer->setColors(i, j, k, color.r, color.g, color.b);
+        }
+    }
+
+    delay_cnt++;
+    if (delay_cnt % delay_cycles == 0)
+    {
+        hue_offset += 3;
+        delay_cnt = 0;
+    }
 }
 
 #endif

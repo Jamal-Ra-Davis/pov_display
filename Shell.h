@@ -46,7 +46,7 @@ struct message_header;
 #define MAX_PAYLOAD (MAX_BUF_SZ-8)
 
 typedef enum {
-      TRIANGE, SQUARE, CROSS, CIRCLE, 
+      TRIANGLE, SQUARE, CROSS, CIRCLE, 
       LBUMP, RBUMP, LSTICK, RSTICK, 
       SHARE, OPTIONS, DUP, DLEFT, 
       DDOWN, DRIGHT, DX, DY, NUM_KEYS

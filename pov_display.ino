@@ -13,7 +13,7 @@
 #include "DMA_SPI.h"
 #include "Shell.h"
 #include <RTCZero.h>
-//#include "Main.h"
+#include "Main.h"
 #include "Color.h"
 
 #define LED_PIN 9
@@ -37,27 +37,17 @@ volatile uint8_t buf_idx = 0;
 const int buf_offset[HEIGHT] = {2*(LENGTH/6), 3*(LENGTH/6), 4*(LENGTH/6), 5*(LENGTH/6), 0*(LENGTH/6), 1*(LENGTH/6)};
 doubleBuffer frame_buffer;
 Shell shell;
-SpaceGame space_game;
+//SpaceGame space_game;
 RTCZero rtc;
 
 int hall;
-
-pov_state_t exec_state = SPACE_GAME;
-bool pov_state_change = true;
-int change_state(pov_state_t state)
-{
-  if (exec_state != state)
-  {
-    exec_state = state;
-    pov_state_change = true;
-  }
-  return 0;
-}
+/*
 void scratch_loop();
 void test_exec();
 void ds4_test();
 void ds4_analog_test();
 void clock_test();
+*/
 
 SPIClass mySPI (&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);//MOSI: 11, SCK: 13
 
@@ -129,6 +119,7 @@ void processSerialCommands()
     }
   }
 }
+/*
 void main_exec()
 {
   switch(exec_state)
@@ -158,13 +149,14 @@ void main_exec()
       break;
   }
 }
+*/
 void superLoop()
 {
   long tick_start = millis();
   processSerialCommands();
   frame_buffer.clear();
   
-  main_exec();//exec function responsible for managing event buffer
+  main_exec(&frame_buffer);//exec function responsible for managing event buffer
 
   frame_buffer.update();
   while((millis() - tick_start) < TICK_DELAY);
@@ -259,6 +251,7 @@ void setup()
     //LOG_POV_SHELL((&shell), "Color: (%d, %d, %d)\n", c.r, c.g, c.b);
     delay(5000);
   }
+  main_setup(&frame_buffer);
 }
 
 
@@ -944,6 +937,7 @@ void hallTrigger()
   adjust_timing(TC, timer_temp, &timer_0);
 }
 
+/*
 void block_test()
 {
   SerialUSB.println("Entering blocktest");
@@ -989,6 +983,7 @@ void block_test()
     delay(20);
   }
 }
+*/
 void endless_runner()
 {
   Vector3d p_pos(50, 3, 0);
@@ -1338,6 +1333,7 @@ void ship_game()
    
 }
 
+/*
 void test_exec()
 {
   static const uint8_t delay_cnt = 7;
@@ -1374,7 +1370,9 @@ void test_exec()
     }
   }
 }
+*/
 
+/*
 void ds4_test()
 {
   //static enum {TRIANGE, SQUARE, CROSS, CIRCLE, LBUMP, RBUMP, LSTICK,
@@ -1444,7 +1442,9 @@ void ds4_test()
     }
   }
 }
+*/
 
+/*
 void clock_test()
 {
   //Clock
@@ -1522,7 +1522,9 @@ void clock_test()
     SERIAL_PRINTF(SerialUSB, "%02d:%02d:%02d\n", hour, min, sec);
   }
 }
+*/
 
+/*
 void ds4_analog_test()
 {
   static int16_t lstick_x = 0;
@@ -1583,15 +1585,13 @@ void ds4_analog_test()
     }
   }
   
-  /*
-  int16_t norm_lstick_x = (100*lstick_x)/0xEFFF;
-  int16_t norm_lstick_y = (100*lstick_y)/0xEFFF;
-  //int16_t norm_rstick_x = (100*rstick_x)/0xEFFF;
-  //int16_t norm_rstick_y = (100*rstick_y)/0xEFFF;
+  //int16_t norm_lstick_x = (100*lstick_x)/0xEFFF;
+  //int16_t norm_lstick_y = (100*lstick_y)/0xEFFF;
+    //int16_t norm_rstick_x = (100*rstick_x)/0xEFFF;
+    //int16_t norm_rstick_y = (100*rstick_y)/0xEFFF;
 
-  int16_t l_mag = sqrt(norm_lstick_x*norm_lstick_x + norm_lstick_y*norm_lstick_y);
-  //int16_t r_mag = sqrt(norm_rstick_x*norm_rstick_x + norm_rstick_y*norm_rstick_y);
-  */
+  //int16_t l_mag = sqrt(norm_lstick_x*norm_lstick_x + norm_lstick_y*norm_lstick_y);
+    //int16_t r_mag = sqrt(norm_rstick_x*norm_rstick_x + norm_rstick_y*norm_rstick_y);
 
   uint16_t norm_l_trig = ((LENGTH-1)*l_trig)/255;
   uint16_t norm_r_trig = ((LENGTH-1)*r_trig)/255;
@@ -1619,3 +1619,4 @@ void ds4_analog_test()
     }
   }
 }
+*/

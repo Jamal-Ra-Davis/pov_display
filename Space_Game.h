@@ -13,7 +13,7 @@ class Bullet
         Vector3d prev_pos;
         int vel;
         int lifetime;
-        const uint8_t color[3] = {60, 255, 0};
+        static constexpr uint8_t color[3] = {60, 255, 0};
         
     public:
         static const uint8_t LIFE_TIME = 25;
@@ -21,6 +21,7 @@ class Bullet
         Bullet();
         Bullet(Vector3d pos_, int vel_, int lt);
         void setBullet(Vector3d pos_, int vel_, int lt);
+        void reset();
 
         void update();
         void draw(doubleBuffer *frame_buffer);
@@ -32,6 +33,10 @@ class Bullet
         
 };
 Bullet::Bullet()
+{
+  lifetime = -1;
+}
+void Bullet::reset()
 {
   lifetime = -1;
 }
@@ -85,9 +90,9 @@ class Ship
         int cool_down;
         
 
-        const uint8_t color[3] = {255, 255, 255};
-        const float BOOST_MULT = 1.5;
-        const int COOL_DOWN_TIME = 3;
+        static constexpr uint8_t color[3] = {255, 255, 255};
+        static constexpr float BOOST_MULT = 1.5f;
+        static const int COOL_DOWN_TIME = 3;
         static const int NUM_BULLETS = 10;
 
         Bullet bullets[NUM_BULLETS];
@@ -118,6 +123,11 @@ Ship::Ship()
     right = false;
     up = false;
     down = false;
+
+    for (int i=0; i<NUM_BULLETS; i++) 
+    {
+      bullets[i].reset();
+    }
 }
 Ship::Ship(Vector3d pos_, Vector3d vel_)
 {
@@ -134,6 +144,12 @@ void Ship::reset(Vector3d pos_, Vector3d vel_)
     right = false;
     up = false;
     down = false;
+    cool_down = 0;
+
+    for (int i=0; i<NUM_BULLETS; i++) 
+    {
+      bullets[i].reset();
+    }
 }
 void Ship::update()
 {
@@ -989,13 +1005,14 @@ class SpaceGame
     bool block_collide;
     uint8_t hits;
     uint8_t cnt;
+    int draw_cnt;
     bool pause;
     Animation face_animation;
     Animation banana;
     Animation sprites;
 
     static constexpr int block_color[3] = {70, 100, 70};
-    static const uint8_t delay_cnt = 10;
+    static const uint8_t delay_cnt = 6;
     static const uint8_t MAX_HITS = 5;
     
   public:
@@ -1017,7 +1034,14 @@ void SpaceGame::reset()
   block_collide = false;
   hits = MAX_HITS;
   cnt = 0;
+  draw_cnt = 0;
   pause = false;
+
+
+  face_animation.setAnimation(RAW_SPRITE, 18*6, 6);
+  banana.setAnimation(BANANA_SPRITE, 64*3, 64*3, true);
+  sprites.setAnimation(sprite_buffers[0], 64*3, 64*3, true);
+
 
   face_animation.startAnimation(13, 5, 3, 10);
   banana.startAnimation(0, 1, 1);
@@ -1067,14 +1091,14 @@ void SpaceGame::update()
 }
 void SpaceGame::draw(doubleBuffer *frame_buffer)
 {
-  static int cnt = 0;
-  int idx = (cnt/100) % NUM_FACES;
-  cnt++;
+  //static int cnt = 0;
+  int idx = (draw_cnt/100) % NUM_FACES;
+  draw_cnt++;
 
   face_animation.draw(frame_buffer, 10, 255, 128, 0);
   banana.draw_rgb(frame_buffer, 0);
 
-  sprites.setAnimation(sprite_buffers[(cnt/350)%24], 64*3, 64*3, true);
+  sprites.setAnimation(sprite_buffers[(draw_cnt/350)%24], 64*3, 64*3, true);
   sprites.startAnimation(0, 1, 1);
   sprites.draw_rgb(frame_buffer, 65);
 
