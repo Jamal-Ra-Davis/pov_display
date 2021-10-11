@@ -13,22 +13,13 @@
 #include "test_animations.h"
 #include "Color.h"
 
-/*
+
 union POV_Games{
     SpaceGame space_game;
     MazeGame maze_game;
     POV_Games() {}
 } pov_games;
-*/
 
-//Can't use common memory until you have reset/init functions for all games's sub-classes
-
-uint8_t game_buf[640];
-SpaceGame* space_game = (SpaceGame*)game_buf;
-MazeGame* maze_game = (MazeGame*)game_buf;
-
-//SpaceGame space_game;
-//MazeGame maze_game;
 
 void scratch_loop(doubleBuffer* frame_buffer);
 void block_test(doubleBuffer* frame_buffer);
@@ -77,7 +68,6 @@ void main_setup(doubleBuffer* frame_buffer)
     SERIAL_PRINTF(SerialUSB, "sizeof(space_game) = %d, sizeof(maze_game) = %d\n", sizeof(SpaceGame), sizeof(MazeGame));
     frame_buffer->reset();
     change_state(SPACE_GAME);
-    //maze.init();
 }
 
 void main_exec(doubleBuffer* frame_buffer)
@@ -109,9 +99,9 @@ void main_exec(doubleBuffer* frame_buffer)
     case POV_SCRATCH_LOOP:
         //scratch_loop(frame_buffer);
         //rainbow_swirl(frame_buffer);
-        check_state_change(init_mazegame, maze_game);
-        maze_game->update();
-        maze_game->draw(frame_buffer);
+        check_state_change(init_mazegame, &pov_games.maze_game);
+        pov_games.maze_game.update();
+        pov_games.maze_game.draw(frame_buffer);
         break;
     case POV_TEST:
         test_exec(frame_buffer); //Uncomment after testing
@@ -132,9 +122,9 @@ void main_exec(doubleBuffer* frame_buffer)
             pov_games.space_game.reset();
         }
         */
-        check_state_change(init_spacegame, space_game);
-        space_game->update();
-        space_game->draw(frame_buffer);
+        check_state_change(init_spacegame, &pov_games.space_game);
+        pov_games.space_game.update();
+        pov_games.space_game.draw(frame_buffer);
         break;
     case CLOCK_DISPLAY:
         clock_test(frame_buffer);
@@ -694,7 +684,7 @@ void test_exec(doubleBuffer* frame_buffer)
 {
   static const uint8_t delay_cnt = 7;
   static uint8_t cnt = 0;
-  static const char* test_message = "AR PRODUCT FW";
+  static const char* test_message = "HACKADAY";
 
   static int message_len = strlen(test_message);
   static int start_offset = -1*message_len*8;
