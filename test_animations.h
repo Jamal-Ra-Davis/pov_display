@@ -6,6 +6,7 @@
 #include "Events.h"
 #include "Color.h"
 #include "Shell.h"
+#include "MathLookup.h"
 
 void textAnimation(doubleBuffer *frame_buffer)
 {
@@ -179,7 +180,7 @@ void pinWheelAnimation_1(doubleBuffer *frame_buffer)
   static uint16_t cnt = 0;
   static const uint16_t delay_cnt = 10; 
 
-  if (cnt++ % delay_cnt)
+  if (cnt++ % delay_cnt == 0)
   {
     if (start == true)
     {
@@ -272,34 +273,46 @@ void pulseAnimation(doubleBuffer *frame_buffer)
 
 void alignment_test(doubleBuffer *frame_buffer)
 {
-  while(1)
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 200; 
+  static Color colors[WIDTH];
+
+  if (cnt++ % delay_cnt == 0)
+  {
+    for (int i=0; i<WIDTH; i++)
+    {
+      doubleBuffer::randColor(&colors[i].r, &colors[i].g, &colors[i].b);
+    }
+  }
+
+  for (int j=0; j<WIDTH; j++)
   {
     uint8_t r, g, b;
-    
-    frame_buffer->clear();
-    for (int j=0; j<WIDTH; j++)
+    r = colors[j].r;
+    g = colors[j].g;
+    b = colors[j].b;
+    for (int k=0; k<HEIGHT; k++)
     {
-      doubleBuffer::randColor(&r, &g, &b);
-      for (int k=0; k<HEIGHT; k++)
-      {
-        frame_buffer->setColors(0, j, k, r, g, b);
-        frame_buffer->setColors(15, j, k, r, g, b);
-        frame_buffer->setColors(30, j, k, r, g, b);
-        frame_buffer->setColors(45, j, k, r, g, b);
-      }
+      frame_buffer->setColors(0, j, k, r, g, b);
+      frame_buffer->setColors(15, j, k, r, g, b);
+      frame_buffer->setColors(30, j, k, r, g, b);
+      frame_buffer->setColors(45, j, k, r, g, b);
     }
-    frame_buffer->update();
-    delay(1000);  
-  }
+  }  
 }
 
+//TODO: Make non-blocking
 void wobbly_words(doubleBuffer *frame_buffer)
 {
+  static uint16_t cnt = 0;
+  static const uint16_t delay_cnt = 20; 
+  const char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
+
   int offset = 0;
   uint8_t r__=128;
   uint8_t g__=128;
   uint8_t b__=128;
-  const char *words[] = {"HELLO", "WORLD", "POV", "11:30"};
+  
   int word_idx = 0;
   while(1)
   {
@@ -400,6 +413,8 @@ void draw_triange_wave(doubleBuffer *frame_buffer)
   }
 }
 
+
+//TODO: Make non-blocking
 //Give ball random velocity, it bounces when it collides with edges of display
 //Collisions cause radial hit effect of randome color
 void ball_collision(doubleBuffer *frame_buffer)
@@ -556,6 +571,7 @@ void ball_collision(doubleBuffer *frame_buffer)
   }
 }
 
+//TODO: Make non-blocking
 void random_walk(doubleBuffer *frame_buffer)
 {
   enum DIRECTION{CW_DIR, CCW_DIR, IN_DIR, OUT_DIR, UP_DIR, DOWN_DIR, NUM_DIR};
@@ -869,23 +885,6 @@ void MazePlayer::update()
     }
   }
 
-/*
-  SerialUSB.print("Next pos: (");
-  SerialUSB.print(next_pos.x);
-  SerialUSB.print(" ");
-  SerialUSB.print(next_pos.y);
-  SerialUSB.print(" ");
-  SerialUSB.print(next_pos.z);
-  SerialUSB.println(")");
-  
-  SerialUSB.print("pos: (");
-  SerialUSB.print(pos.x);
-  SerialUSB.print(" ");
-  SerialUSB.print(pos.y);
-  SerialUSB.print(" ");
-  SerialUSB.print(pos.z);
-  SerialUSB.println(")");
-*/
   pos = next_pos;
 }
 void MazePlayer::draw(doubleBuffer *frame_buffer, Vector3d offset)
@@ -935,15 +934,6 @@ bool MazePlayer::intersects(Vector3d p0, Vector3d p1)
 {
   
   Vector3d pos1 = Vector3d(pos.x+size-1, pos.y+size-1, pos.z+size-1);
-  /*
-  if (p0.x >= pos.x && p1.x <= pos1.x &&
-      p0.y >= pos.y && p1.y <= pos1.y &&
-      p0.z >= pos.z && p1.z <= pos1.z)
-  {
-    return true;
-  }
-  return false;
-  */
   if (
         (pos.x > p1.x) || //Left edge of player is further right than right edge of object
         (pos1.x < p0.x) || //right edge of player is further left than left edge of object
@@ -1242,6 +1232,44 @@ void rainbow_swirl(doubleBuffer* frame_buffer)
         hue_offset += 3;
         delay_cnt = 0;
     }
+}
+
+void sine_wave_3d(doubleBuffer* frame_buffer)
+{
+  static const float PI_FRAC = M_PI/16.0;
+  static const uint8_t delay_cycles = 7;
+  static uint8_t delay_cnt = 0;
+  static int sin_idx = 0;
+
+  float val2;
+  int g_value;
+  for (int j=0; j<WIDTH; j++)
+  {
+    int c_idx = (j+sin_idx) % 32;
+    val2 = 0.5*cos_lookup_alt(c_idx*PI_FRAC) + 0.5;
+    g_value = (int)(255*val2);  
+  }
+  for (int i=0; i<LENGTH; i++)
+  {
+    int s_idx = (i+sin_idx) % 32;
+    float brightness = 0.5*sin_lookup_alt(s_idx*PI_FRAC) + 0.5;
+    int r_value = (int)(255*brightness);
+    int b_value = 255 - r_value;
+    int height = (int)(brightness*(HEIGHT-1) + 0.5);
+    for (int j=0; j<WIDTH; j++)
+    {
+        frame_buffer->setColors(i, j, height, r_value, g_value, b_value);
+    }
+  }
+
+  delay_cnt++;
+  if (delay_cnt % delay_cycles == 0)
+  {
+    delay_cnt = 0;
+    sin_idx++;
+    if (sin_idx == LENGTH)
+      sin_idx = 0;
+  }
 }
 
 #endif

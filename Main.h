@@ -67,7 +67,7 @@ void main_setup(doubleBuffer* frame_buffer)
 {
     SERIAL_PRINTF(SerialUSB, "sizeof(space_game) = %d, sizeof(maze_game) = %d\n", sizeof(SpaceGame), sizeof(MazeGame));
     frame_buffer->reset();
-    change_state(SPACE_GAME);
+    change_state(POV_SCRATCH_LOOP);
 }
 
 void main_exec(doubleBuffer* frame_buffer)
@@ -98,10 +98,8 @@ void main_exec(doubleBuffer* frame_buffer)
     {
     case POV_SCRATCH_LOOP:
         //scratch_loop(frame_buffer);
+        sine_wave_3d(frame_buffer);
         //rainbow_swirl(frame_buffer);
-        check_state_change(init_mazegame, &pov_games.maze_game);
-        pov_games.maze_game.update();
-        pov_games.maze_game.draw(frame_buffer);
         break;
     case POV_TEST:
         test_exec(frame_buffer); //Uncomment after testing
@@ -114,14 +112,12 @@ void main_exec(doubleBuffer* frame_buffer)
         ds4_test(frame_buffer);
         //ds4_analog_test(frame_buffer);
         break;
+    case MAZE_GAME:
+        check_state_change(init_mazegame, &pov_games.maze_game);
+        pov_games.maze_game.update();
+        pov_games.maze_game.draw(frame_buffer);
+        break;
     case SPACE_GAME:
-        /*
-        if (pov_state_change)
-        {
-            pov_state_change = false;
-            pov_games.space_game.reset();
-        }
-        */
         check_state_change(init_spacegame, &pov_games.space_game);
         pov_games.space_game.update();
         pov_games.space_game.draw(frame_buffer);
@@ -172,7 +168,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
         delay(33);
     }
 
-    
+    /*
     MazeGame maze;
     maze.init();
     while (1)
@@ -187,7 +183,9 @@ void scratch_loop(doubleBuffer* frame_buffer)
         frame_buffer->update();
         delay(33);
     }
-    
+    */
+
+    /*
     RingBuf<char, 32> serialBuffer;
     serialBuffer.clear();
     while(0)
@@ -271,6 +269,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
     }
     }
     
+
     while(0)
     {
         while(Serial1.available())
@@ -342,7 +341,8 @@ void scratch_loop(doubleBuffer* frame_buffer)
         }
         }
     }
-    
+    */
+
     //random_walk(frame_buffer);
     /*
     SerialUSB.println("In Loop");
@@ -369,6 +369,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
     return;
     */
     
+    /*
     //Draw cartesian coord
     Vector3d p0(-8, 8, 5);
     Vector3d p1(8, 8, 5);
@@ -377,7 +378,9 @@ void scratch_loop(doubleBuffer* frame_buffer)
     {
         
     }
+    */
 
+    /*
     //Clock
     int sec = 0;
     int min = 0;
@@ -463,8 +466,11 @@ void scratch_loop(doubleBuffer* frame_buffer)
         
         delay(10);
     }
+       */
 
+    /*
     //3d sine wave
+    SERIAL_PRINTF(SerialUSB, "3d sine wave\n");
     int sin_idx = 0;
     while(1)
     {
@@ -491,15 +497,16 @@ void scratch_loop(doubleBuffer* frame_buffer)
         sin_idx++;
         if (sin_idx == LENGTH)
         sin_idx = 0;
-        delay(10);
+        delay(35);
     }
-
+    */
     
+    //Think i was trying to do rotating boxes or something
     Vector3d from(20,0,0);
     Vector3d to(30, 0, 0);
     int pi_idx = 0;
     //float pi_frac = M_PI/12.0;
-    while(1)
+    while(0)
     {
         frame_buffer->clear();
 
@@ -546,48 +553,53 @@ void scratch_loop(doubleBuffer* frame_buffer)
         }
         delay(10);
     }
-    ball_collision(frame_buffer);
+
+    //ball_collision(frame_buffer);
     
-    Color rgb;
-    rgb.r = 20;
-    rgb.g = 60;
-    rgb.b = 120;
-    char message[10] = "HELLO";
-    frame_buffer->clear();
-    for (int i=0; i<LENGTH; i++)
-    {
-        for (int j=0; j<WIDTH; j++)
-        {
-        if (j == 0 || j == 1 || j == (WIDTH -1))
-        {
-            frame_buffer->setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
-        }
-        else if (i == 0 || i == 1 || i == 5 || i == 6)
-        {
-            frame_buffer->setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
-        }
-        else
-        {
-            frame_buffer->setColors(i, j, 0, 128, 128, 128);
-        }
-        }
-    }
-    int height_idx = (offset_val/2 % 5) + 1;
-    writeString(message, offset_val, height_idx, rgb.r, rgb.g, rgb.b, frame_buffer);
-    frame_buffer->update();
-    offset_val++;
-    if (offset_val > 40)
-    {
-        offset_val = 0;
-    }
-    delay(100);
-    return;
     
+    //Laughing man text attempt
+    if (false) {
+        Color rgb;
+        rgb.r = 20;
+        rgb.g = 60;
+        rgb.b = 120;
+        char message[10] = "HELLO";
+        frame_buffer->clear();
+        for (int i = 0; i < LENGTH; i++)
+        {
+            for (int j = 0; j < WIDTH; j++)
+            {
+                if (j == 0 || j == 1 || j == (WIDTH - 1))
+                {
+                    frame_buffer->setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
+                }
+                else if (i == 0 || i == 1 || i == 5 || i == 6)
+                {
+                    frame_buffer->setColors(i, j, 0, rgb.r, rgb.g, rgb.b);
+                }
+                else
+                {
+                    frame_buffer->setColors(i, j, 0, 128, 128, 128);
+                }
+            }
+        }
+        int height_idx = (offset_val / 2 % 5) + 1;
+        writeString(message, offset_val, height_idx, rgb.r, rgb.g, rgb.b, frame_buffer);
+        frame_buffer->update();
+        offset_val++;
+        if (offset_val > 40)
+        {
+            offset_val = 0;
+        }
+        delay(100);
+        return;
+    }
 
     
-    block_test(frame_buffer);
-    return;
+    //block_test(frame_buffer);
+    //return;
     
+    /*
     frame_buffer->forceSingleBuffer();
     frame_buffer->clear();
     uint16_t color = 0;
@@ -630,6 +642,7 @@ void scratch_loop(doubleBuffer* frame_buffer)
         frame_buffer->update();
         delay(35);
     } 
+    */
 }
 void block_test(doubleBuffer* frame_buffer)
 {

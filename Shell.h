@@ -56,6 +56,7 @@ typedef enum {
               POV_SCRATCH_LOOP,
               POV_TEST, 
               DS4_TEST,
+              MAZE_GAME,
               SPACE_GAME,
               CLOCK_DISPLAY,
               NUM_POV_STATES
